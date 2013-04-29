@@ -1,0 +1,3 @@
+- instead of reading all read pairs into a list, only read up until they could no longer be clustered together
+- if read is beyond clustering distance of the immediately previous read, then cluster whatever has been read so far
+- 

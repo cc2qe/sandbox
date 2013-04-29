@@ -1,0 +1,392 @@
+fastx_clipper.o: fastx_clipper.cpp \
+ /source/gnu_4.4/include/c++/4.4.3/cstddef \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/c++config.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/os_defines.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/features.h \
+ /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h \
+ /usr/include/gnu/stubs.h /usr/include/gnu/stubs-64.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/cpu_defines.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include/stddef.h \
+ /source/gnu_4.4/include/c++/4.4.3/cstdlib /usr/include/stdlib.h \
+ /usr/include/bits/waitflags.h /usr/include/bits/waitstatus.h \
+ /usr/include/endian.h /usr/include/bits/endian.h /usr/include/xlocale.h \
+ /usr/include/sys/types.h /usr/include/bits/types.h \
+ /usr/include/bits/typesizes.h /usr/include/time.h \
+ /usr/include/sys/select.h /usr/include/bits/select.h \
+ /usr/include/bits/sigset.h /usr/include/bits/time.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/sys/sysmacros.h \
+ /usr/include/bits/pthreadtypes.h /usr/include/alloca.h \
+ /source/gnu_4.4/include/c++/4.4.3/algorithm \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_algobase.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/functexcept.h \
+ /source/gnu_4.4/include/c++/4.4.3/exception_defines.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/cpp_type_traits.h \
+ /source/gnu_4.4/include/c++/4.4.3/ext/type_traits.h \
+ /source/gnu_4.4/include/c++/4.4.3/ext/numeric_traits.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_pair.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/move.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/concept_check.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_iterator_base_types.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_iterator_base_funcs.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_iterator.h \
+ /source/gnu_4.4/include/c++/4.4.3/debug/debug.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_algo.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/algorithmfwd.h \
+ /source/gnu_4.4/include/c++/4.4.3/initializer_list \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_heap.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_tempbuf.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_construct.h \
+ /source/gnu_4.4/include/c++/4.4.3/new \
+ /source/gnu_4.4/include/c++/4.4.3/exception \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_uninitialized.h \
+ /source/gnu_4.4/include/c++/4.4.3/ostream \
+ /source/gnu_4.4/include/c++/4.4.3/ios \
+ /source/gnu_4.4/include/c++/4.4.3/iosfwd \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stringfwd.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/postypes.h \
+ /source/gnu_4.4/include/c++/4.4.3/cwchar \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/wchar.h \
+ /usr/include/stdio.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include/stdarg.h \
+ /usr/include/bits/wchar.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/char_traits.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/localefwd.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/c++locale.h \
+ /source/gnu_4.4/include/c++/4.4.3/clocale /usr/include/locale.h \
+ /usr/include/bits/locale.h /source/gnu_4.4/include/c++/4.4.3/cctype \
+ /usr/include/ctype.h /source/gnu_4.4/include/c++/4.4.3/bits/ios_base.h \
+ /source/gnu_4.4/include/c++/4.4.3/ext/atomicity.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/gthr.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/gthr-default.h \
+ /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
+ /usr/include/signal.h /usr/include/bits/setjmp.h /usr/include/unistd.h \
+ /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
+ /usr/include/bits/confname.h /usr/include/getopt.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/atomic_word.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/locale_classes.h \
+ /source/gnu_4.4/include/c++/4.4.3/string \
+ /source/gnu_4.4/include/c++/4.4.3/bits/allocator.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/c++allocator.h \
+ /source/gnu_4.4/include/c++/4.4.3/ext/new_allocator.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/ostream_insert.h \
+ /source/gnu_4.4/include/c++/4.4.3/cxxabi-forced.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_function.h \
+ /source/gnu_4.4/include/c++/4.4.3/backward/binders.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/basic_string.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/basic_string.tcc \
+ /source/gnu_4.4/include/c++/4.4.3/bits/locale_classes.tcc \
+ /source/gnu_4.4/include/c++/4.4.3/streambuf \
+ /source/gnu_4.4/include/c++/4.4.3/bits/streambuf.tcc \
+ /source/gnu_4.4/include/c++/4.4.3/bits/basic_ios.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/locale_facets.h \
+ /source/gnu_4.4/include/c++/4.4.3/cwctype /usr/include/wctype.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/ctype_base.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/streambuf_iterator.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/ctype_inline.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/locale_facets.tcc \
+ /source/gnu_4.4/include/c++/4.4.3/bits/basic_ios.tcc \
+ /source/gnu_4.4/include/c++/4.4.3/bits/ostream.tcc \
+ /source/gnu_4.4/include/c++/4.4.3/iostream \
+ /source/gnu_4.4/include/c++/4.4.3/istream \
+ /source/gnu_4.4/include/c++/4.4.3/bits/istream.tcc \
+ /source/gnu_4.4/include/c++/4.4.3/vector \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_vector.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/stl_bvector.h \
+ /source/gnu_4.4/include/c++/4.4.3/bits/vector.tcc /usr/include/string.h \
+ /usr/include/libio.h /usr/include/_G_config.h /usr/include/gconv.h \
+ /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
+ /usr/include/bits/stdio.h ../libfastx/sequence_alignment.h \
+ /usr/include/err.h /usr/include/errno.h /usr/include/bits/errno.h \
+ /usr/include/linux/errno.h /usr/include/asm/errno.h \
+ /usr/include/asm-x86_64/errno.h /usr/include/asm-generic/errno.h \
+ /usr/include/asm-generic/errno-base.h ../../config.h ../libfastx/fastx.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/limits.h \
+ /shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/syslimits.h \
+ /usr/include/limits.h /usr/include/bits/posix1_lim.h \
+ /usr/include/bits/local_lim.h /usr/include/linux/limits.h \
+ /usr/include/bits/posix2_lim.h /usr/include/bits/xopen_lim.h \
+ ../libfastx/fastx_args.h
+
+/source/gnu_4.4/include/c++/4.4.3/cstddef:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/c++config.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/os_defines.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/features.h:
+
+/usr/include/sys/cdefs.h:
+
+/usr/include/bits/wordsize.h:
+
+/usr/include/gnu/stubs.h:
+
+/usr/include/gnu/stubs-64.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/cpu_defines.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include/stddef.h:
+
+/source/gnu_4.4/include/c++/4.4.3/cstdlib:
+
+/usr/include/stdlib.h:
+
+/usr/include/bits/waitflags.h:
+
+/usr/include/bits/waitstatus.h:
+
+/usr/include/endian.h:
+
+/usr/include/bits/endian.h:
+
+/usr/include/xlocale.h:
+
+/usr/include/sys/types.h:
+
+/usr/include/bits/types.h:
+
+/usr/include/bits/typesizes.h:
+
+/usr/include/time.h:
+
+/usr/include/sys/select.h:
+
+/usr/include/bits/select.h:
+
+/usr/include/bits/sigset.h:
+
+/usr/include/bits/time.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/sys/sysmacros.h:
+
+/usr/include/bits/pthreadtypes.h:
+
+/usr/include/alloca.h:
+
+/source/gnu_4.4/include/c++/4.4.3/algorithm:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_algobase.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/functexcept.h:
+
+/source/gnu_4.4/include/c++/4.4.3/exception_defines.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/cpp_type_traits.h:
+
+/source/gnu_4.4/include/c++/4.4.3/ext/type_traits.h:
+
+/source/gnu_4.4/include/c++/4.4.3/ext/numeric_traits.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_pair.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/move.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/concept_check.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_iterator_base_types.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_iterator_base_funcs.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_iterator.h:
+
+/source/gnu_4.4/include/c++/4.4.3/debug/debug.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_algo.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/algorithmfwd.h:
+
+/source/gnu_4.4/include/c++/4.4.3/initializer_list:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_heap.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_tempbuf.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_construct.h:
+
+/source/gnu_4.4/include/c++/4.4.3/new:
+
+/source/gnu_4.4/include/c++/4.4.3/exception:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_uninitialized.h:
+
+/source/gnu_4.4/include/c++/4.4.3/ostream:
+
+/source/gnu_4.4/include/c++/4.4.3/ios:
+
+/source/gnu_4.4/include/c++/4.4.3/iosfwd:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stringfwd.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/postypes.h:
+
+/source/gnu_4.4/include/c++/4.4.3/cwchar:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/wchar.h:
+
+/usr/include/stdio.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include/stdarg.h:
+
+/usr/include/bits/wchar.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/char_traits.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/localefwd.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/c++locale.h:
+
+/source/gnu_4.4/include/c++/4.4.3/clocale:
+
+/usr/include/locale.h:
+
+/usr/include/bits/locale.h:
+
+/source/gnu_4.4/include/c++/4.4.3/cctype:
+
+/usr/include/ctype.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/ios_base.h:
+
+/source/gnu_4.4/include/c++/4.4.3/ext/atomicity.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/gthr.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/gthr-default.h:
+
+/usr/include/pthread.h:
+
+/usr/include/sched.h:
+
+/usr/include/bits/sched.h:
+
+/usr/include/signal.h:
+
+/usr/include/bits/setjmp.h:
+
+/usr/include/unistd.h:
+
+/usr/include/bits/posix_opt.h:
+
+/usr/include/bits/environments.h:
+
+/usr/include/bits/confname.h:
+
+/usr/include/getopt.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/atomic_word.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/locale_classes.h:
+
+/source/gnu_4.4/include/c++/4.4.3/string:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/allocator.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/c++allocator.h:
+
+/source/gnu_4.4/include/c++/4.4.3/ext/new_allocator.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/ostream_insert.h:
+
+/source/gnu_4.4/include/c++/4.4.3/cxxabi-forced.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_function.h:
+
+/source/gnu_4.4/include/c++/4.4.3/backward/binders.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/basic_string.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/basic_string.tcc:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/locale_classes.tcc:
+
+/source/gnu_4.4/include/c++/4.4.3/streambuf:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/streambuf.tcc:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/basic_ios.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/locale_facets.h:
+
+/source/gnu_4.4/include/c++/4.4.3/cwctype:
+
+/usr/include/wctype.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/ctype_base.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/streambuf_iterator.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/../../../../include/c++/4.4.3/x86_64-unknown-linux-gnu/bits/ctype_inline.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/locale_facets.tcc:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/basic_ios.tcc:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/ostream.tcc:
+
+/source/gnu_4.4/include/c++/4.4.3/iostream:
+
+/source/gnu_4.4/include/c++/4.4.3/istream:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/istream.tcc:
+
+/source/gnu_4.4/include/c++/4.4.3/vector:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_vector.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/stl_bvector.h:
+
+/source/gnu_4.4/include/c++/4.4.3/bits/vector.tcc:
+
+/usr/include/string.h:
+
+/usr/include/libio.h:
+
+/usr/include/_G_config.h:
+
+/usr/include/gconv.h:
+
+/usr/include/bits/stdio_lim.h:
+
+/usr/include/bits/sys_errlist.h:
+
+/usr/include/bits/stdio.h:
+
+../libfastx/sequence_alignment.h:
+
+/usr/include/err.h:
+
+/usr/include/errno.h:
+
+/usr/include/bits/errno.h:
+
+/usr/include/linux/errno.h:
+
+/usr/include/asm/errno.h:
+
+/usr/include/asm-x86_64/errno.h:
+
+/usr/include/asm-generic/errno.h:
+
+/usr/include/asm-generic/errno-base.h:
+
+../../config.h:
+
+../libfastx/fastx.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/limits.h:
+
+/shr/home/source/gnu_4.4/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.4.3/include-fixed/syslimits.h:
+
+/usr/include/limits.h:
+
+/usr/include/bits/posix1_lim.h:
+
+/usr/include/bits/local_lim.h:
+
+/usr/include/linux/limits.h:
+
+/usr/include/bits/posix2_lim.h:
+
+/usr/include/bits/xopen_lim.h:
+
+../libfastx/fastx_args.h:

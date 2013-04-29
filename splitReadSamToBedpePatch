@@ -1,0 +1,239 @@
+#!/usr/bin/python
+
+import sys
+from optparse import OptionParser
+import re
+import os
+
+
+cigarPattern   = '([0-9]+[MIDNSHP])'
+cigarSearch    = re.compile(cigarPattern)
+atomicCigarPattern   = '([0-9]+)([MIDNSHP])'
+atomicCigarSearch    =  re.compile(atomicCigarPattern)
+
+class refPos (object):
+    """
+    struct to store the end position of reference CIGAR operations
+    """
+    def __init__(self, rPos):
+        self.rPos = int(rPos)
+
+
+class queryPos (object):
+    """
+    struct to store the start and end positions of query CIGAR operations
+    """
+    def __init__(self, qsPos, qePos, qLen):
+        self.qsPos = int(qsPos)
+        self.qePos = int(qePos)
+        self.qLen  = int(qLen)
+
+
+class cigarOp (object):
+    """
+    sturct to store a discrete CIGAR operations
+    """
+    def __init__(self, opLength, op):
+        self.length = int(opLength)
+        self.op     = op
+
+class SAM (object):
+    """
+    __very__ basic class for SAM input.
+    """
+    def __init__(self, samList = []):
+        if len(samList) > 0:
+            self.query    = samList[0]
+            self.flag     = int(samList[1])
+            self.ref      = samList[2]
+            self.pos      = int(samList[3])
+            self.mapq     = int(samList[4])
+            self.cigar    = samList[5]
+            self.matRef   = samList[6]
+            self.matePos  = int(samList[7])
+            self.iSize    = int(samList[8])
+            self.seq      = samList[9]
+            self.qual     = samList[10]
+            self.tags     = samList[11:]#tags is a list of each tag:vtype:value sets
+            self.valid    = 1
+        else:
+            self.valid = 0
+            self.query = 'null'
+
+    def extractCigarOps(self):
+        if (self.cigar == "*"):
+            self.cigarOps = []
+        elif (self.flag & 0x0010):
+            cigarOpStrings = cigarSearch.findall(self.cigar)
+            cigarOps = []
+            for opString in cigarOpStrings:
+                cigarOpList = atomicCigarSearch.findall(opString)
+                # "struct" for the op and it's length
+                cigar = cigarOp(cigarOpList[0][0], cigarOpList[0][1])
+                # add to the list of cigarOps
+                cigarOps.append(cigar)
+                self.cigarOps = cigarOps
+            cigarOps.reverse()
+            ##do in reverse order because negative strand##
+        else:
+            cigarOpStrings = cigarSearch.findall(self.cigar)
+            cigarOps = []
+            for opString in cigarOpStrings:
+                cigarOpList = atomicCigarSearch.findall(opString)
+                # "struct" for the op and it's length
+                cigar = cigarOp(cigarOpList[0][0], cigarOpList[0][1])
+                # add to the list of cigarOps
+                cigarOps.append(cigar)
+                self.cigarOps = cigarOps
+
+    def getCigarOps(self):
+        return self.cigarOps
+    
+    def isReverseStrand(self):
+        if (self.flag & 0x0010):
+            return True
+        return False
+
+
+def processSam(samFile):        
+    if samFile == "stdin":
+        s = sys.stdin
+    else:
+        s = open(samFile, 'r')
+    blockList = []
+    prevSam = SAM()
+    inBlock = 0
+    for line in s:
+        if line[0] == "@":
+            continue
+        samList = line.strip().split()
+        currSam = SAM(samList)
+        if currSam.query != prevSam.query and 'null' not in blockList:
+            if len(blockList) > 1:
+                makeBedpe(blockList)
+                blockList = []
+                inBlock = 0
+        elif currSam.query == prevSam.query and inBlock == 1:
+            blockList.append(currSam)
+        else:
+            blockList.append(currSam)
+            blockList.append(prevSam)
+            inBlock = 1
+        prevSam = currSam
+
+        if len(blockList) > 1:
+            makeBedpe(blockList)
+            blockList = []
+            inBlock = 0
+                                                            
+
+def makeBedpe(blockList):
+    bedBlock=[]
+    for i in range(len(blockList)):
+        blockList[i].extractCigarOps()
+        ref = calcRefPosFromCigar(blockList[i].cigarOps, blockList[i].pos)
+        editList = blockList[i].tags
+        query = calcQueryPosFromCigar(blockList[i].cigarOps)
+        strand = "+"
+        if blockList[i].isReverseStrand() == True:
+            strand = "-"
+        qual = int(blockList[i].mapq)
+        score = int(editList[0].split(":")[2])
+        bedBlock.append([blockList[i].ref, blockList[i].pos - 1, ref.rPos - 1, blockList[i].query, strand, query.qsPos, query.qePos, qual, score, query.qLen])
+    bedBlock.sort(cmp=lambda x,y: cmp(x[5],y[5]))
+    for i in range(len(bedBlock)-1):
+        if i + 1 <= len(bedBlock):
+            set1 = set(range(bedBlock[i][5], bedBlock[i][6] + 1))
+            set2 = set(range(bedBlock[i+1][5], bedBlock[i+1][6] + 1))
+            nonOverlap1 = len(set1) - len(set1 & set2)
+            nonOverlap2 = len(set2) - len(set1 & set2)
+            minNonOverlap = min(nonOverlap1, nonOverlap2)  
+            # 0='chr5', 1=126958222, 2=126970245, 3='gi|316252064|gb|AEKP01000074.1|', 4='+', 5=0, 6=12024, 7=250, 8=12008
+            if bedBlock[i][5] > bedBlock[i+1][5]: ##swap##
+                print str(bedBlock[i+1][0]) + "\t" + str(bedBlock[i+1][1]) + "\t" + str(bedBlock[i+1][2]) + "\t" + str(bedBlock[i][0]) + "\t" + \
+                str(bedBlock[i][1]) + "\t" + str(bedBlock[i][2]) + "\t" + str(bedBlock[i][3]) + "\t" + str(bedBlock[i][8]+bedBlock[i+1][8]) + "\t" + str(bedBlock[i+1][4]) + \
+                "\t"  + str(bedBlock[i][4]) + "\t" + str(bedBlock[i+1][5]) + "\t" + str(bedBlock[i+1][6]) + "\t" + \
+                str(bedBlock[i][5]) + "\t" + str(bedBlock[i][6])  + "\t" + str(minNonOverlap) + "\t" + str(bedBlock[i][9]) + "\t" + "MQ1="+str(bedBlock[i+1][7])+":"+"MQ2="+str(bedBlock[i][7])+":"+"AS1="+str(bedBlock[i+1][8])+":"+"AS2="+str(bedBlock[i][8])
+            else: ##don't swap##    
+                print str(bedBlock[i][0]) + "\t" + str(bedBlock[i][1]) + "\t" + str(bedBlock[i][2]) + "\t" + str(bedBlock[i+1][0]) + "\t" + \
+                str(bedBlock[i+1][1]) + "\t" + str(bedBlock[i+1][2]) + "\t" + str(bedBlock[i][3]) + "\t" + str(bedBlock[i][8]+bedBlock[i+1][8]) + "\t" + str(bedBlock[i][4]) + \
+                "\t"  + str(bedBlock[i+1][4]) + "\t" + str(bedBlock[i][5]) + "\t" + str(bedBlock[i][6]) + "\t" + \
+                str(bedBlock[i+1][5]) + "\t" + str(bedBlock[i+1][6])  + "\t" + str(minNonOverlap)  + "\t" + str(bedBlock[i][9]) + "\t" + "MQ1="+str(bedBlock[i][7])+":"+"MQ2="+str(bedBlock[i+1][7])+":"+"AS1="+str(bedBlock[i][8])+":"+"AS2="+str(bedBlock[i+1][8])
+
+
+def calcRefPosFromCigar(cigarOps, alignmentStart):
+    rPos = alignmentStart
+    for cigar in cigarOps:
+        if cigar.op == 'M':
+            rPos += cigar.length
+        elif cigar.op == 'D':
+            rPos += cigar.length
+        elif cigar.op == 'I':
+            continue
+        elif cigar.op == 'N':
+            raise ValueError('Unexpected Cigar Operation')
+    d = refPos(rPos)
+    return d
+
+def calcQueryPosFromCigar(cigarOps):
+    qsPos = 0
+    qePos = 0
+    qLen  = 0
+    # if first op is a H, need to shift start position 
+    # the opPosition counter sees if the for loop is looking at the first index of the cigar object    
+    opPosition = 0  
+    for cigar in cigarOps:
+        if opPosition == 0 and (cigar.op == 'H' or cigar.op == 'S'):
+            qsPos += cigar.length
+            qePos += cigar.length
+            qLen  += cigar.length
+        elif opPosition > 0 and (cigar.op == 'H' or cigar.op == 'S'):
+            qLen  += cigar.length
+        elif cigar.op == 'M' or cigar.op == 'I':
+            qePos += cigar.length
+            qLen  += cigar.length
+        # elif cigar.op == 'D' or cigar.op == 'N':
+            # Do nothing.
+        opPosition += 1
+    d = queryPos(qsPos, qePos, qLen);
+    return d
+
+
+def main():
+
+    usage = """%prog -i <samFile or stdin>>
+
+splitReadSamToBedpe
+
+Author: Michael Lindberg, Aaron Quinlan & Ira Hall	
+Description: reports split read mappings in a SAM file to bedpe; 
+IMPORTANT NOTE: this replaces previous versions splitReadSamToBedPe and splitReadSamToBedPe_ih (Ira completed final version)
+OUTPUT: in addition to standard bedpe format, 
+col8=sum of alignment scores; 
+col11=queryStart1; 
+col12=queryEnd1;
+col13=queryStart2; 
+col14=queryEnd2; 
+col15=minNonOverlap between the two alignments; 
+col15=query length;
+col16=mapping qualities and alignment scores
+
+Last modified: June 8, 2011
+    """
+
+    parser = OptionParser(usage)
+    parser.add_option("-i", dest="samFile", help="sam filename sorted by read id (not enforced), or standard input (-i stdin)", metavar="FILE")
+    (opts, args) = parser.parse_args()
+
+    if opts.samFile is None:
+        parser.print_help()
+        print
+    else:
+        processSam(opts.samFile)
+
+
+
+            
+if __name__ == "__main__":
+    sys.exit(main())
+    (END)

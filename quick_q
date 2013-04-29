@@ -1,0 +1,126 @@
+#!/bin/sh
+
+############################################################
+#  Program: quick_q
+#  Author : Ryan Layer
+############################################################
+
+
+## BEGIN SCRIPT
+usage()
+{
+    cat << EOF
+
+usage: $0 OPTIONS
+
+version: 0.3
+
+OPTIONS can be:
+  -h           Show this message
+  -m  mem      Memory (default 1g)
+  -t  threads  Threads per device (default 1)
+  -d  devices  Devices (default 1)
+  -n  name     Name (default quick_q)
+  -c  cmd      Command
+  -q  queue    Queue name
+  -M           Mail results
+  -z  other    Additional qsub parameters
+EOF
+}
+
+# Show usage when there are no arguments.
+if test -z "$1"
+then
+    usage
+    exit
+fi
+
+MEM="1g"
+NAME="quick_q"
+THREADS=1
+DEVICE=1
+CMD=1
+QUEUE=
+OUTPUT=
+ERROR=
+OTHER=
+MAIL=false
+
+# Check options passed in.
+while getopts "h m:t:n:c:d:q:o:e:u:z: M" OPTION
+do
+    case $OPTION in
+        h)
+            usage
+            exit 1
+            ;;
+        m)
+            MEM=$OPTARG
+            ;;
+        t)
+            THREADS=$OPTARG
+            ;;
+        d)
+            DEVICE=$OPTARG
+            ;;
+        n)
+            NAME=$OPTARG
+            ;;
+        c)
+            CMD=$OPTARG
+            ;;
+        q)
+            QUEUE=$OPTARG
+            ;;
+	o)
+	    OUTPUT=$OPTARG
+	    ;;
+	e)
+	    ERROR=$OPTARG
+	    ;;
+	M)
+	    MAIL=true
+	    ;;
+	z)
+	    OTHER=$OPTARG
+	    ;;
+        ?)
+            usage
+            exit
+            ;;
+    esac
+done
+
+#QSUB="/usr/pbs/bin/qsub"
+QSUB=/usr/local/bin/qsub
+
+# for pbs_version = PBSPro_11.2.0.113417
+#QSUB_CMD="$QSUB -l select=$DEVICE:mem=$MEM:ncpus=$THREADS -m bae -N $NAME -M rl6sf@virginia.edu"
+# for version: 3.0.3
+QSUB_CMD="$QSUB -l nodes=$DEVICE:ppn=$THREADS,mem=$MEM -N $NAME"
+
+if $MAIL
+then
+    QSUB_CMD+=" -m abe"
+else
+    QSUB_CMD+=" -m n"
+fi
+
+if [ ! -z "$QUEUE" ]
+then
+    QSUB_CMD+=" -q $QUEUE"
+fi
+
+if [ ! -z "$OTHER" ]
+then
+    QSUB_CMD+=" $OTHER"
+fi
+
+#echo $QSUB_CMD
+
+JID=`echo "cd \\$PBS_O_WORKDIR; $CMD" | $QSUB_CMD`
+echo $JID
+DATE=`date +%Y%m%d_%T`
+echo $DATE > $JID.log
+echo $JID >> $JID.log
+echo $CMD >> $JID.log

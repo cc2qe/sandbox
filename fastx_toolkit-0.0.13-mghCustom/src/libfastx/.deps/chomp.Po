@@ -1,0 +1,3 @@
+chomp.o chomp.o: chomp.c chomp.h
+
+chomp.h:

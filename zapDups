@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# define usage function
+usage(){
+    echo -e "usage: zapDups [-h] [-u] [-k column] file
+
+Author: Colby Chiang (cc2qe@virginia.edu)
+Description: Removes duplicate lines that occur consecutively in a file
+
+positional arguments:
+  file\tassumed to be sorted on -k column by default. If not,
+\tplease use the -u flag to specify an unsorted input. ('-' for stdin)
+
+optional arguments:
+  -h\tshow this message and exit
+  -u\tinput file is unsorted (uses more memory)
+  -k\tkey column for matches (default: 0, for full line match)"
+    exit 1
+}
+
+# set default values
+k=0
+unsorted=false
+
+# process command line args
+while getopts huk: opt
+do
+    case "$opt" in
+	h) usage;;
+	u) unsorted=true;;
+	k) k=$OPTARG;;
+#	i) input=$OPTARG;;
+	\?) usage;;
+    esac
+done
+
+# check that the positional arguments are there
+if [ $(( $# - $OPTIND )) -lt 0 ]
+then
+    usage;
+    exit 1
+fi
+
+# set the last arg as the positional arg for input
+input=${@:$OPTIND:1}
+
+# if input is unsorted, make an array to store entries
+# that have already been visited, and only print if next
+# entry is not in the array
+if $unsorted
+then
+    awk -F, "!_[\$${k}]++" FS="\t" $input
+
+# if input file is sorted, only check the previous entry
+# for a match
+else
+    awk "{if (\$${k}!=PREV) print \$0; PREV=\$${k}}" $input
+fi
+
+# exit cleanly
+exit 0

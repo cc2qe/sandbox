@@ -1,0 +1,7 @@
+#inlcude <cstdlib>
+#include <cstdarg>
+#include <iostream>
+
+#include "kstring.h"
+#include "sam.h"
+

@@ -1,0 +1,423 @@
+fasta_formatter.o fasta_formatter.o: fasta_formatter.cpp \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstddef \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/c++config.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/os_defines.h \
+  /usr/include/features.h /usr/include/sys/cdefs.h \
+  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
+  /usr/include/gnu/stubs-64.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/cpu_defines.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/include/stddef.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstdlib \
+  /usr/include/stdlib.h /usr/include/bits/waitflags.h \
+  /usr/include/bits/waitstatus.h /usr/include/endian.h \
+  /usr/include/bits/endian.h /usr/include/xlocale.h \
+  /usr/include/sys/types.h /usr/include/bits/types.h \
+  /usr/include/bits/typesizes.h /usr/include/time.h \
+  /usr/include/sys/select.h /usr/include/bits/select.h \
+  /usr/include/bits/sigset.h /usr/include/bits/time.h \
+  /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h \
+  /usr/include/alloca.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/iostream \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ostream \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ios \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/iosfwd \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/c++locale.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstring \
+  /usr/include/string.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstdio \
+  /usr/include/stdio.h /usr/include/libio.h /usr/include/_G_config.h \
+  /usr/include/wchar.h /usr/include/bits/wchar.h /usr/include/gconv.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/include/stdarg.h \
+  /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h \
+  /usr/include/bits/stdio.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/clocale \
+  /usr/include/locale.h /usr/include/bits/locale.h \
+  /usr/include/langinfo.h /usr/include/nl_types.h /usr/include/iconv.h \
+  /usr/include/libintl.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstdarg \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/c++io.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/gthr.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/gthr-default.h \
+  /usr/include/pthread.h /usr/include/sched.h /usr/include/bits/sched.h \
+  /usr/include/signal.h /usr/include/bits/setjmp.h /usr/include/unistd.h \
+  /usr/include/bits/posix_opt.h /usr/include/bits/environments.h \
+  /usr/include/bits/confname.h /usr/include/getopt.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cctype \
+  /usr/include/ctype.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stringfwd.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/postypes.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cwchar \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ctime \
+  /usr/include/stdint.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/functexcept.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/exception_defines.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/exception \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/char_traits.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_algobase.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/climits \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/include/limits.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/include/syslimits.h \
+  /usr/include/limits.h /usr/include/bits/posix1_lim.h \
+  /usr/include/bits/local_lim.h /usr/include/linux/limits.h \
+  /usr/include/bits/posix2_lim.h /usr/include/bits/xopen_lim.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_pair.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/cpp_type_traits.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ext/type_traits.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/utility \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_relops.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_iterator_base_types.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_iterator_base_funcs.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/concept_check.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_iterator.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/debug/debug.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/localefwd.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/ios_base.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ext/atomicity.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/atomic_word.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/locale_classes.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/string \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/memory \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/allocator.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/c++allocator.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ext/new_allocator.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/new \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_construct.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_uninitialized.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_raw_storage_iter.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/limits \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/ostream_insert.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_function.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/basic_string.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/algorithm \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_algo.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_heap.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_tempbuf.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/basic_string.tcc \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/streambuf \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/streambuf.tcc \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/basic_ios.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/streambuf_iterator.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/locale_facets.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cwctype \
+  /usr/include/wctype.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/ctype_base.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/ctype_inline.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/codecvt.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/time_members.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/messages_members.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/basic_ios.tcc \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/ostream.tcc \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/locale \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/locale_facets.tcc \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/typeinfo \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/istream \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/istream.tcc \
+  /usr/include/err.h \
+  /shr/home/cc472/bin/libgtextutils-0.6/include/gtextutils/gtextutils/stream_wrapper.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/fstream \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/basic_file.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/fstream.tcc \
+  /shr/home/cc472/bin/libgtextutils-0.6/include/gtextutils/gtextutils/text_line_reader.h \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/sstream \
+  /shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/sstream.tcc \
+  sequence_writers.h ../../config.h
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstddef:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/c++config.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/os_defines.h:
+
+/usr/include/features.h:
+
+/usr/include/sys/cdefs.h:
+
+/usr/include/bits/wordsize.h:
+
+/usr/include/gnu/stubs.h:
+
+/usr/include/gnu/stubs-64.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/cpu_defines.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/include/stddef.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstdlib:
+
+/usr/include/stdlib.h:
+
+/usr/include/bits/waitflags.h:
+
+/usr/include/bits/waitstatus.h:
+
+/usr/include/endian.h:
+
+/usr/include/bits/endian.h:
+
+/usr/include/xlocale.h:
+
+/usr/include/sys/types.h:
+
+/usr/include/bits/types.h:
+
+/usr/include/bits/typesizes.h:
+
+/usr/include/time.h:
+
+/usr/include/sys/select.h:
+
+/usr/include/bits/select.h:
+
+/usr/include/bits/sigset.h:
+
+/usr/include/bits/time.h:
+
+/usr/include/sys/sysmacros.h:
+
+/usr/include/bits/pthreadtypes.h:
+
+/usr/include/alloca.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/iostream:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ostream:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ios:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/iosfwd:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/c++locale.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstring:
+
+/usr/include/string.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstdio:
+
+/usr/include/stdio.h:
+
+/usr/include/libio.h:
+
+/usr/include/_G_config.h:
+
+/usr/include/wchar.h:
+
+/usr/include/bits/wchar.h:
+
+/usr/include/gconv.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/include/stdarg.h:
+
+/usr/include/bits/stdio_lim.h:
+
+/usr/include/bits/sys_errlist.h:
+
+/usr/include/bits/stdio.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/clocale:
+
+/usr/include/locale.h:
+
+/usr/include/bits/locale.h:
+
+/usr/include/langinfo.h:
+
+/usr/include/nl_types.h:
+
+/usr/include/iconv.h:
+
+/usr/include/libintl.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cstdarg:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/c++io.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/gthr.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/gthr-default.h:
+
+/usr/include/pthread.h:
+
+/usr/include/sched.h:
+
+/usr/include/bits/sched.h:
+
+/usr/include/signal.h:
+
+/usr/include/bits/setjmp.h:
+
+/usr/include/unistd.h:
+
+/usr/include/bits/posix_opt.h:
+
+/usr/include/bits/environments.h:
+
+/usr/include/bits/confname.h:
+
+/usr/include/getopt.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cctype:
+
+/usr/include/ctype.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stringfwd.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/postypes.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cwchar:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ctime:
+
+/usr/include/stdint.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/functexcept.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/exception_defines.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/exception:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/char_traits.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_algobase.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/climits:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/include/limits.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/include/syslimits.h:
+
+/usr/include/limits.h:
+
+/usr/include/bits/posix1_lim.h:
+
+/usr/include/bits/local_lim.h:
+
+/usr/include/linux/limits.h:
+
+/usr/include/bits/posix2_lim.h:
+
+/usr/include/bits/xopen_lim.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_pair.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/cpp_type_traits.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ext/type_traits.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/utility:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_relops.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_iterator_base_types.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_iterator_base_funcs.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/concept_check.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_iterator.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/debug/debug.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/localefwd.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/ios_base.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ext/atomicity.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/atomic_word.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/locale_classes.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/string:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/memory:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/allocator.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/c++allocator.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/ext/new_allocator.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/new:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_construct.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_uninitialized.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_raw_storage_iter.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/limits:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/ostream_insert.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_function.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/basic_string.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/algorithm:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_algo.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_heap.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/stl_tempbuf.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/basic_string.tcc:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/streambuf:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/streambuf.tcc:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/basic_ios.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/streambuf_iterator.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/locale_facets.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/cwctype:
+
+/usr/include/wctype.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/ctype_base.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/ctype_inline.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/codecvt.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/time_members.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/messages_members.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/basic_ios.tcc:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/ostream.tcc:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/locale:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/locale_facets.tcc:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/typeinfo:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/istream:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/istream.tcc:
+
+/usr/include/err.h:
+
+/shr/home/cc472/bin/libgtextutils-0.6/include/gtextutils/gtextutils/stream_wrapper.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/fstream:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/x86_64-unknown-linux-gnu/bits/basic_file.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/fstream.tcc:
+
+/shr/home/cc472/bin/libgtextutils-0.6/include/gtextutils/gtextutils/text_line_reader.h:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/sstream:
+
+/shr/home/source/gnu_4.2/lib/gcc/x86_64-unknown-linux-gnu/4.2.2/../../../../include/c++/4.2.2/bits/sstream.tcc:
+
+sequence_writers.h:
+
+../../config.h:

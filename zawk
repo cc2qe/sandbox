@@ -1,0 +1,70 @@
+#!/bin/bash
+
+############################################################
+#  Program: zawk
+#  Author : Colby Chiang
+############################################################
+
+
+## BEGIN SCRIPT
+usage()
+{
+    cat << EOF
+
+usage: $0 OPTIONS
+
+OPTIONS can be:
+    -h      Show this message
+
+EOF
+}
+
+# Show usage when there are no arguments.
+if test -z "$1"
+then
+    usage
+    exit
+fi
+
+VERBOSE=
+FILENAME=
+
+# Check options passed in.
+while getopts "h" OPTION
+do
+    case $OPTION in
+        h)
+            usage
+            exit 1
+            ;;
+        f)
+            FILENAME=$OPTARG
+            ;;
+        v)
+            VERBOSE=1
+            ;;
+        ?)
+            usage
+            exit
+            ;;
+    esac
+done
+
+# check that the positional arguments are there
+if [ $(( $# - $OPTIND )) -lt 0 ]
+then
+    usage;
+    exit 1
+fi
+
+# set the last arg as the positional arg for input
+awkString=${@:$OPTIND:1}
+
+# Do something with the arguments...
+
+echo $awkString
+
+
+`echo awk \'{ $awkString } \'`
+
+## END SCRIPT

@@ -1,0 +1,8 @@
+#include "bam_select.hpp"
+
+
+
+int main(int argc, char **argv) {
+  
+
+}
