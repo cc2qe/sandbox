@@ -17,7 +17,7 @@ version: 0.3
 
 OPTIONS can be:
   -h           Show this message
-  -m  mem      Memory (default 1g)
+  -m  mem      Memory (default 1gb)
   -t  threads  Threads per device (default 1)
   -d  devices  Devices (default 1)
   -n  name     Name (default quick_q)
@@ -35,7 +35,7 @@ then
     exit
 fi
 
-MEM="1g"
+MEM="1gb"
 NAME="quick_q"
 THREADS=1
 DEVICE=1
