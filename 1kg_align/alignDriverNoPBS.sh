@@ -1,20 +1,21 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]
+if [ $# -ne 4 ]
 then
-    echo usage $0 [sample] [sampleDirectory] [node]
+    echo usage $0 [sample] [fastq1] [fastq2] [node]
     exit 1
 fi
 
+exit 0
+
 # Directory and data names
-SAMPLE=$1
-SAMPLEDIR=$2
 ROOTDIR=/scratch/cc2qe/1kg/batch1
 WORKDIR=${ROOTDIR}/$SAMPLE
+SAMPLE=$1
+SAMPLEDIR=$2
 
 # Annotations
-REF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.fa
-NOVOREF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.k14s1.novoindex
+REF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.k14s1.novoindex
 INDELS1=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.indels_mills_devine_hg19_leftAligned_collapsed_double_hit.indels.sites.vcf.gz
 INDELS2=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.low_coverage_vqsr.20101123.indels.sites.vcf.gz
 DBSNP=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.dbsnp.build135.snps.sites.vcf.gz
@@ -22,14 +23,13 @@ INTERVALS=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/output
 
 # PBS parameters
 NODE=$3
-QUEUE=primary
+QUEUE=full
 
 # Software paths
 NOVOALIGN=/shared/external_bin/novoalign
 GATK=/shared/external_bin/GenomeAnalysisTK-2.4-9/GenomeAnalysisTK.jar
 SAMTOOLS=/shared/bin/samtools
 PICARD=/mnt/thor_pool1/user_data/cc2qe/software/picard-tools-1.90
-QUICK_Q=/mnt/thor_pool1/user_data/cc2qe/code/bin/quick_q
 
 # ---------------------
 # STEP 1: Allocate the data to the local drive
@@ -38,40 +38,34 @@ QUICK_Q=/mnt/thor_pool1/user_data/cc2qe/code/bin/quick_q
 # Require a lot of memory for this so we don't have tons of jobs writing to drives at once
 
 # make the working directory
-MOVE_FILES_CMD="mkdir -p $WORKDIR &&
-rsync -rv $SAMPLEDIR/* $WORKDIR"
+mkdir $WORKDIR
+rsync -rv $SAMPLEDIR/* $WORKDIR
 
-MOVE_FILES_CMD="echo hi"
-
-#echo $MOVE_FILES_CMD
-MOVE_FILES=`$QUICK_Q -m 512mb -d $NODE -t 1 -n moveTest -c " $MOVE_FILES_CMD " -q $QUEUE`
 
 ########### MAKE SUR EYO UFIX OIEHEWORIHJWO THE FASTQ FILEPATHS!!!!!!!!!!!
 #zcat *_1.filt.fastq.gz | gzip -c > ${WORKDIR}/${SAMPLE}_1.fq.gz
 #zcat *_2.filt.fastq.gz | gzip -c > ${WORKDIR}/${SAMPLE}_2.fq.gz
+
+# change directory to the sample working directory
+cd $WORKDIR
 
 
 # ---------------------
 # STEP 2: Align the fastq files with novoalign
 # 12 cores and 16g of memory
 
-ALIGN_CMD="cd $WORKDIR &&
-for i in \$(seq 1 \`cat fqlist1 | wc -l\`)
+for i in $(seq 1 `cat fqlist1 | wc -l`)
 do
-    FASTQ1=\`sed -n \${i}p fqlist1\` &&
-    FASTQ2=\`sed -n \${i}p fqlist2\` &&
-    READGROUP=\`echo \$FASTQ1 | sed 's/_.*//g'\` &&
+    FASTQ1=`sed -n ${i}p fqlist1`
+    FASTQ2=`sed -n ${i}p fqlist2`
+    READGROUP=`echo $FASTQ1 | sed 's/_.*//g'`
 
-    RGSTRING=\`cat \${READGROUP}_readgroup.txt\` &&
+    # readgroup string
+    RGSTRING=`cat ${READGROUP}_readgroup.txt`
 
-    $NOVOALIGN -d $NOVOREF -f \$FASTQ1 \$FASTQ2 \
-	-r Random -c 12 -o sam \$RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.novo.bam ;
-done"
-
-echo $ALIGN_CMD
-ALIGN=`$QUICK_Q -m 16gb -d $NODE -t 12 -n novoTest -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:${MOVE_FILES}"`
-
-exit 0
+    $NOVOALIGN -d $REF -f ${SAMPLE}_1.fq.gz ${SAMPLE}_2.fq.gz \
+	-r Random -c 12 -o sam $RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.$READGROUP.novo.bam
+done
 
 # ---------------------
 # STEP 3: Sort and fix flags on the bam file
