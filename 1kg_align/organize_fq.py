@@ -23,24 +23,24 @@ def organizeFastqs(fastqList):
 
         strand = int( re.sub('.*_(.)\.filt\.fastq\.gz', '\\1', file) )
 
-        destDir = rootDir + '/' + sampleId + '/' + libraryId
+        destDir = rootDir + '/' + sampleId
 
         print sampleId, runId, file, libraryId, strand
         RGstring = '@RG\tID:%s\tLB:%s\tSM:%s\tPI:%s\tCN:%s\tPL:%s\tDS:%s' % (runId, libraryId, sampleId, pairInsert, center, platform, studyId)
 
         # check if directory exists
-#        if not os.path.isdir(rootDir + '/' + sampleId):
-            #print 'mkdir ' + rootDir + '/' + sampleId
- #           os.mkdir(rootDir + '/' + sampleId)
-  #      if not os.path.isdir(destDir):
-   #         print 'mkdir ' + destDir
-    #        os.mkdir(destDir)
-        
+        if not os.path.isdir(destDir):
+            print 'mkdir ' + destDir
+            os.mkdir(rootDir + '/' + sampleId)
+
         # make readgroup sam flag
+        readGroupFile = open(destDir + '/' + runId + '_readgroup.txt', 'w')
+        readGroupFile.write(RGstring)
+        readGroupFile.close()
         
 
         #print 'moving %s to %s' % (file, destDir)
-        #os.rename(file, destDir + '/' + file)
+        os.rename(file, destDir + '/' + file)
     return
 
 # --------------------------------------
