@@ -26,7 +26,7 @@ def organizeFastqs(fastqList):
         destDir = rootDir + '/' + sampleId
 
         print sampleId, runId, file, libraryId, strand
-        RGstring = '@RG\tID:%s\tLB:%s\tSM:%s\tPI:%s\tCN:%s\tPL:%s\tDS:%s' % (runId, libraryId, sampleId, pairInsert, center, platform, studyId)
+        RGstring = '@RG\\tID:%s\\tLB:%s\\tSM:%s\\tPI:%s\\tCN:%s\\tPL:%s\\tDS:%s' % (runId, libraryId, sampleId, pairInsert, center, platform, studyId)
 
         # check if directory exists
         if not os.path.isdir(destDir):

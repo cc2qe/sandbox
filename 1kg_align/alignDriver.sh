@@ -4,6 +4,7 @@
 ROOTDIR='/scratch/cc2qe/1kg/batch1'
 WORKDIR=${ROOTDIR}/$SAMPLE
 SAMPLE=$1
+SAMPLEDIR=$2
 
 # Annotations
 REF='/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.k14s1.novoindex'
@@ -23,14 +24,17 @@ SAMTOOLS=/shared/bin/samtools
 # ---------------------
 # STEP 1: Allocate the data to the local drive
 
-# move the files to the local drive
+# copy the files to the local drive
 # Require a lot of memory for this so we don't have tons of jobs writing to drives at once
 
+# make the working directory
+mkdir $WORKDIR
+rsync -rv $SAMPLEDIR/* $WORKDIR
 
 
 ########### MAKE SUR EYO UFIX OIEHEWORIHJWO THE FASTQ FILEPATHS!!!!!!!!!!!
-zcat *_1.filt.fastq.gz | gzip -c > ${WORKDIR}/${SAMPLE}_1.fq.gz
-zcat *_2.filt.fastq.gz | gzip -c > ${WORKDIR}/${SAMPLE}_2.fq.gz
+#zcat *_1.filt.fastq.gz | gzip -c > ${WORKDIR}/${SAMPLE}_1.fq.gz
+#zcat *_2.filt.fastq.gz | gzip -c > ${WORKDIR}/${SAMPLE}_2.fq.gz
 
 # change directory to the sample working directory
 cd $WORKDIR
@@ -38,11 +42,20 @@ cd $WORKDIR
 
 # ---------------------
 # STEP 2: Align the fastq files with novoalign
-
 # 12 cores and 16g of memory
-$NOVOALIGN -d $REF -f ${SAMPLE}_1.fq.gz ${SAMPLE}_2.fq.gz \
-    -r Random -c 12 -o sam | $SAMTOOLS view -Sb - > $SAMPLE.novo.bam
 
+for i in $(seq 1 `cat fqlist1 | wc -l`)
+do
+    FASTQ1=`sed -n ${i}p fqlist1`
+    FASTQ2=`sed -n ${i}p fqlist2`
+    READGROUP=`echo $FASTQ1 | sed 's/_.*//g'`
+
+    # readgroup string
+    RGSTRING=`cat ${READGROUP}_readgroup.txt`
+
+    $NOVOALIGN -d $REF -f ${SAMPLE}_1.fq.gz ${SAMPLE}_2.fq.gz \
+	-r Random -c 12 -o sam $RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.novo.bam
+done
 
 # ---------------------
 # STEP 3: Sort and fix flags on the bam file
@@ -55,6 +68,7 @@ $SAMTOOLS view -bu $SAMPLE.novo.bam | \
 
 # index the bam file
 $SAMTOOLS index $SAMPLE.novo.fixed.bam
+
 
 
 # ---------------------
