@@ -64,29 +64,37 @@ do
 
     RGSTRING=\`cat \${READGROUP}_readgroup.txt\` &&
 
-    $NOVOALIGN -d $NOVOREF -f \$FASTQ1 \$FASTQ2 \
+    time $NOVOALIGN -d $NOVOREF -f \$FASTQ1 \$FASTQ2 \
 	-r Random -c 12 -o sam \$RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.novo.bam ;
 done"
 
-echo $ALIGN_CMD
-ALIGN=`$QUICK_Q -m 16gb -d $NODE -t 12 -n novoTest -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:${MOVE_FILES}"`
+ALIGN_CMD="echo hi"
 
-exit 0
+echo $ALIGN_CMD
+ALIGN=`$QUICK_Q -m 16gb -d $NODE -t 12 -n novo_$SAMPLE -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:${MOVE_FILES}"`
+
+
 
 # ---------------------
 # STEP 3: Sort and fix flags on the bam file
 
-for READGROUP in `cat rglist`
+# this only requires one core but a decent amount of memory.
+SORT_CMD="cd $WORKDIR &&
+for READGROUP in \`cat rglist\`
 do
-    # this only requires one core but a decent amount of memory.
-    $SAMTOOLS view -bu $SAMPLE.$READGROUP.novo.bam | \
+
+    time $SAMTOOLS view -bu $SAMPLE.\$READGROUP.novo.bam | \
 	$SAMTOOLS sort -n -o - samtools_nsort_tmp | \
 	$SAMTOOLS fixmate /dev/stdin /dev/stdout | $SAMTOOLS sort -o - samtools_csort_tmp | \
-	$SAMTOOLS fillmd -u - $REF > $SAMPLE.$READGROUP.novo.fixed.bam
+	$SAMTOOLS fillmd -u - $REF > $SAMPLE.\$READGROUP.novo.fixed.bam &&
     
-    # index the bam file
-    $SAMTOOLS index $SAMPLE.$READGROUP.novo.fixed.bam
-done
+    $SAMTOOLS index $SAMPLE.\$READGROUP.novo.fixed.bam
+done"
+
+echo $SORT_CMD
+SORT=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_$SAMPLE -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN"`
+
+exit 0
 
 
 # ---------------------
