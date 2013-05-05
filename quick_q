@@ -50,7 +50,7 @@ OTHER=
 MAIL=false
 
 # Check options passed in.
-while getopts "h m:t:n:c:d:q:o:e:u:z: M" OPTION
+while getopts "h m:t:n:c:d:q:o:e:W:u:z: M" OPTION
 do
     case $OPTION in
         h)
