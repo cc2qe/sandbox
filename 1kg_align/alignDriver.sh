@@ -44,7 +44,7 @@ rsync -rv $SAMPLEDIR/* $WORKDIR"
 MOVE_FILES_CMD="echo hi"
 
 #echo $MOVE_FILES_CMD
-MOVE_FILES=`$QUICK_Q -m 512mb -d $NODE -t 1 -n moveTest -c " $MOVE_FILES_CMD " -q $QUEUE`
+MOVE_FILES_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n moveTest -c " $MOVE_FILES_CMD " -q $QUEUE`
 
 ########### MAKE SUR EYO UFIX OIEHEWORIHJWO THE FASTQ FILEPATHS!!!!!!!!!!!
 #zcat *_1.filt.fastq.gz | gzip -c > ${WORKDIR}/${SAMPLE}_1.fq.gz
@@ -71,7 +71,7 @@ done"
 ALIGN_CMD="echo hi"
 
 echo $ALIGN_CMD
-ALIGN=`$QUICK_Q -m 16gb -d $NODE -t 12 -n novo_$SAMPLE -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:${MOVE_FILES}"`
+ALIGN_Q=`$QUICK_Q -m 16gb -d $NODE -t 12 -n novo_$SAMPLE -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:$MOVE_FILES_Q"`
 
 
 
@@ -95,86 +95,114 @@ done"
 echo $SORT_CMD
 SORT_CMD="echo hi"
 
-SORT=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_$SAMPLE -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN"`
+SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_$SAMPLE -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"`
 
 
 
 # ---------------------
 # STEP 5: GATK reprocessing
 
-    # make the set of regions for local realignment (don't need to do this step because it is unrelated tot eh alignment. Just need to do it once globally) . This would normally be after MarkDups.
-    # java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp -jar $GATK -T RealignerTargetCreator -R $REF -o output.intervals -known $INDELS1 -known $INDELS2
-
 GATK_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
-    java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.\$READGROUP.novo.fixed.bam OUTPUT=$SAMPLE.\$READGROUP.novo.fixed.mkdup.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
+    java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar \
+         INPUT=$SAMPLE.\$READGROUP.novo.fixed.bam \
+         OUTPUT=$SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
+         ASSUME_SORTED=TRUE \
+         METRICS_FILE=/dev/null \
+         VALIDATION_STRINGENCY=SILENT \
+         MAX_FILE_HANDLES=1000 \
+         CREATE_INDEX=true &&
 
+    echo 'make the set of regions for local realignment (don't need to do this step because it is unrelated tot eh alignment. Just need to do it once globally).' &&
+    echo 'java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp -jar $GATK -T RealignerTargetCreator -R $REF -o output.intervals -known $INDELS1 -known $INDELS2' &&
 
-    java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK -T IndelRealigner -R $REF -I $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam -o $SAMPLE.\$READGROUP.novo.realign.fixed.bam -targetIntervals $INTERVALS -known $INDELS1 -known $INDELS2 -LOD 0.4 -model KNOWNS_ONLY &&
+    time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
+         -T IndelRealigner \
+         -R $REF \
+         -I $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
+         -o $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
+         -targetIntervals $INTERVALS \
+         -known $INDELS1 \
+         -known $INDELS2 \
+         -LOD 0.4 \
+         -model KNOWNS_ONLY &&
+
+    time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
+        -T BaseRecalibrator \
+        -nct 3 \
+        -I $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
+        -R $REF \
+        -knownSites $DBSNP \
+        -l INFO \
+        -cov ReadGroupCovariate \
+        -cov QualityScoreCovariate \
+        -cov CycleCovariate \
+        -cov ContextCovariate \
+        -o $SAMPLE.\$READGROUP.recal_data.grp &&
+
 
     java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
-	-T CountCovariates \
-	-R $REF \
-	-I $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
-	-recalFile $SAMPLE.\$READGROUP.recal_data.csv \
-	-knownSites $DBSNP \
-	-l INFO \
-	-L '1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;X;Y;MT' \
-	-cov ReadGroupCovariate \
-	-cov QualityScoreCovariate \
-	-cov CycleCovariate \
-	-cov DinucCovariate &&
+        -T PrintReads \
+        -R $REF \
+        -I $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
+        -BQSR $SAMPLE.\$READGROUP.recal_data.grp \
+        --disable_bam_indexing \
+        -l INFO \
+        -o $SAMPLE.\$READGROUP.recal.bam &&
 
-    java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
-	-T TableRecalibration \
-	-R $REF \
-	-recalFile $SAMPLE.\$READGROUP.recal_data.csv \
-	-I $SAMPLE.\$READGROUP.realign.fixed.bam \
-	-o $SAMPLE.\$READGROUP.recal.bam \
-	-l INFO \
-	-noOQs \
-	--disable_bam_indexing
+    echo 'cleaning up...' &&
+    rm $SAMPLE.\$READGROUP.novo.fixed.bam \
+        $SAMPLE.\$READGROUP.novo.fixed.bam.bai \
+        $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
+        $SAMPLE.\$READGROUP.novo.fixed.mkdup.bai
+
 done"
 
+GATK_CMD="echo hi"
 
-SORT=`$QUICK_Q -m 8gb -d $NODE -t 1 -n gatk_$SAMPLE -c " $GATK_CMD " -q $QUEUE -z "-W depend=afterok:$SORT"`
+GATK_Q=`$QUICK_Q -m 8gb -d $NODE -t 3 -n gatk_$SAMPLE -c " $GATK_CMD " -q $QUEUE -z "-W depend=afterok:$SORT_Q"`
 
-exit 0
+
 
 # -----------------------
 # STEP 6: quick calmd
 
-cd $WORKDIR
-for READGROUP in `cat rglist`
+CALMD_CMD="cd $WORKDIR &&
+for READGROUP in \`cat rglist\`
 do
-    # Calmd
-    $SAMTOOLS calmd -Erb $SAMPLE.$READGROUP.recal.bam $REF > $SAMPLE.$READGROUP.recal.bq.bam
-    $SAMTOOLS index $SAMPLE.$READGROUP.recal.bq.bam
-done
+    $SAMTOOLS calmd -Erb $SAMPLE.\$READGROUP.recal.bam $REF > $SAMPLE.\$READGROUP.recal.bq.bam &&
+    $SAMTOOLS index $SAMPLE.\$READGROUP.recal.bq.bam
+done"
+
+CALMD_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n calmd_$SAMPLE -c " $CALMD_CMD " -q $QUEUE -W depend-afterok:$GATK_Q`
 
 
 # -----------------------
 # STEP 7: Merging files
 # Using Picard instead of samtools because it does a better job of preserving header information
 
-cd $WORKDIR
+MERGE_CMD="cd $WORKDIR &&
 
-INPUT_STRING=""
-for READGROUP in `cat rglist`
+INPUT_STRING='' &&
+for READGROUP in \`cat rglist\`
 do
-    INPUT_STRING+=" I=$SAMPLE.$READGROUP.recal.bq.bam"
-done
+    INPUT_STRING+=' I=$SAMPLE.\$READGROUP.recal.bq.bam'
+done &&
 
-java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar $INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true
+java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true"
+
+MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_$SAMPLE -c " $MERGE_CMD " -q $QUEUE -W depend-afterok:$CALMD_Q`
 
 
 # -----------------------
 # STEP 8: Mark duplicates again following the merge.
 
+MKDUP2_CMD="cd $WORKDIR &&
 
-java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.merged.bam OUTPUT=$SAMPLE.$READGROUP.novo.fixed.mkdup.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true    
+time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.merged.bam OUTPUT=$SAMPLE.merged.mkdup.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true"
 
+MKDUP2_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n mkdup2_$SAMPLE -c " $MKDUP2_cmd " -q $QUEUE -W depend-afterok:$MERGE_Q`
 
 
 # -----------------------
