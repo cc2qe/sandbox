@@ -23,8 +23,11 @@ OPTIONS can be:
   -n  name     Name (default quick_q)
   -c  cmd      Command
   -q  queue    Queue name
-  -M           Mail results
-  -z  other    Additional qsub parameters
+  -M  mail     Mail results
+  -o  output   Path for stdout of job (default jobname.ojobid)
+  -e  error    Path for stderr of job (default jobname.ejobid)
+  -W  attr     Additional attributes
+  -z  other    Other qsub parameters
 EOF
 }
 
@@ -81,6 +84,9 @@ do
 	M)
 	    MAIL=true
 	    ;;
+	W)
+	    ATTR=$OPTARG
+	    ;;
 	z)
 	    OTHER=$OPTARG
 	    ;;
@@ -109,6 +115,21 @@ fi
 if [ ! -z "$QUEUE" ]
 then
     QSUB_CMD+=" -q $QUEUE"
+fi
+
+if [ ! -z "$OUTPUT" ]
+then
+    QSUB_CMD+=" -o $OUTPUT"
+fi
+
+if [ ! -z "$ERROR" ]
+then
+    QSUB_CMD+=" -e $ERROR"
+fi
+
+if [ ! -z "$ATTR" ]
+then
+    QSUB_CMD+=" -W $ATTR"
 fi
 
 if [ ! -z "$OTHER" ]
