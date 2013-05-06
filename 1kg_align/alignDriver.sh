@@ -175,7 +175,10 @@ do
     rm $SAMPLE.\$READGROUP.recal.bam
 done"
 
+CALMD_CMD="echo calmdcmd"
+
 CALMD_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n calmd_$SAMPLE -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q`
+
 
 
 # -----------------------
@@ -187,10 +190,17 @@ MERGE_CMD="cd $WORKDIR &&
 INPUT_STRING='' &&
 for READGROUP in \`cat rglist\`
 do
-    INPUT_STRING+=' I=$SAMPLE.\$READGROUP.recal.bq.bam'
+    INPUT_STRING+=\" I=$SAMPLE.\$READGROUP.recal.bq.bam\"
 done &&
 
-java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true"
+java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true &&
+
+for READGROUP in \`cat rglist\`
+do
+    rm $SAMPLE.\$READGROUP.recal.bq.bam
+done"
+
+MERGE_CMD="echo merge_cmd command"
 
 MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_$SAMPLE -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q`
 
@@ -205,6 +215,8 @@ time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar 
 echo 'clean up files...' &&
 rm $SAMPLE.merged.bam"
 
+MKDUP2_CMD="echo mkdup2 command"
+
 MKDUP2_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n mkdup2_$SAMPLE -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q`
 
 
@@ -218,7 +230,9 @@ time java -Xmx16g -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
     -I $SAMPLE.novo.bam \
     -o $SAMPLE.novo.reduced.bam"
 
-REDUCE_Q=`$QUICK_Q -m 16gb $NODE -t 1 -n reduce_$SAMPLE -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
+#REDUCE_CMD="echo reduce command"
+
+REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_$SAMPLE -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
 
 
 # ---------------------
@@ -230,9 +244,9 @@ rsync -rv $SAMPLE.novo.bam $SAMPLE.novo.bai $SAMPLE.novo.reduced.bam $SAMPLE.nov
 echo 'removing scratch directory...' &&
 echo 'rm -r $WORKDIR' &&
 
-echo $SAMPLE >> $ROOTDIR/completed.txt"
+echo $SAMPLE >> $SAMPLEDIR/../completed.txt"
 
-RESTORE_Q=`$QUICK_Q -m 512mb $NODE -t 1 -n restore_$SAMPLE -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
+RESTORE_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n restore_$SAMPLE -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
 
 
 
