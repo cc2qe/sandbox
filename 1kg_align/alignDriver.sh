@@ -43,7 +43,7 @@ rsync -rv $SAMPLEDIR/* $WORKDIR"
 
 #MOVE_FILES_CMD="echo MOVE_FILES_CMD"
 
-MOVE_FILES_Q=`$QUICK_Q -m 32500mb -d $NODE -t 1 -n move_$SAMPLE -c " $MOVE_FILES_CMD " -q $QUEUE`
+MOVE_FILES_Q=`$QUICK_Q -m 32500mb -d $NODE -t 1 -n move_${SAMPLE}_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE`
 
 
 
@@ -61,13 +61,13 @@ do
     RGSTRING=\`cat \${READGROUP}_readgroup.txt\` &&
 
     time $NOVOALIGN -d $NOVOREF -f \$FASTQ1 \$FASTQ2 \
-	-r Random -c 12 -o sam \$RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.novo.bam ;
+	-r Random -c 6 -o sam \$RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.novo.bam ;
 done"
 
 #ALIGN_CMD="echo ALIGN_CMD"
 
 #echo $ALIGN_CMD
-ALIGN_Q=`$QUICK_Q -m 15500mb -d $NODE -t 12 -n novo_$SAMPLE -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:$MOVE_FILES_Q"`
+ALIGN_Q=`$QUICK_Q -m 15500mb -d $NODE -t 7 -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:$MOVE_FILES_Q"`
 
 
 
@@ -91,7 +91,7 @@ done"
 echo $SORT_CMD
 #SORT_CMD="echo SORT_CMD"
 
-SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_$SAMPLE -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"`
+SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"`
 
 
 
@@ -157,7 +157,7 @@ done"
 
 #GATK_CMD="echo GATK_CMD"
 
-GATK_Q=`$QUICK_Q -m 8gb -d $NODE -t 3 -n gatk_$SAMPLE -c " $GATK_CMD " -q $QUEUE -z "-W depend=afterok:$SORT_Q"`
+GATK_Q=`$QUICK_Q -m 8gb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -z "-W depend=afterok:$SORT_Q"`
 
 
 
@@ -176,7 +176,7 @@ done"
 
 #CALMD_CMD="echo calmd_cmd"
 
-CALMD_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n calmd_$SAMPLE -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q`
+CALMD_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n calmd_${SAMPLE}_${NODE} -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q`
 
 
 
@@ -201,7 +201,7 @@ done"
 
 #MERGE_CMD="echo merge_cmd command"
 
-MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_$SAMPLE -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q`
+MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q`
 
 
 # -----------------------
@@ -216,7 +216,7 @@ rm $SAMPLE.merged.bam $SAMPLE.merged.bai"
 
 #MKDUP2_CMD="echo mkdup2 command"
 
-MKDUP2_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n mkdup2_$SAMPLE -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q`
+MKDUP2_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q`
 
 
 # -----------------------
@@ -231,7 +231,7 @@ time java -Xmx16g -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
 
 #REDUCE_CMD="echo reduce command"
 
-REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_$SAMPLE -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
+REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
 
 
 # ---------------------
@@ -247,7 +247,7 @@ echo $SAMPLE >> $SAMPLEDIR/../completed.txt"
 
 #RESTORE_CMD="echo RESTORE_CMD"
 
-RESTORE_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n restore_$SAMPLE -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
+RESTORE_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
 
 
 
