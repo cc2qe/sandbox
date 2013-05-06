@@ -41,16 +41,15 @@ QUICK_Q=/mnt/thor_pool1/user_data/cc2qe/code/bin/quick_q
 MOVE_FILES_CMD="mkdir -p $WORKDIR &&
 rsync -rv $SAMPLEDIR/* $WORKDIR"
 
-MOVE_FILES_CMD="echo hi"
+#MOVE_FILES_CMD="echo MOVE_FILES_CMD"
 
-#echo $MOVE_FILES_CMD
-MOVE_FILES_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n move_$SAMPLE -c " $MOVE_FILES_CMD " -q $QUEUE`
+MOVE_FILES_Q=`$QUICK_Q -m 32500mb -d $NODE -t 1 -n move_$SAMPLE -c " $MOVE_FILES_CMD " -q $QUEUE`
 
 
 
 # ---------------------
 # STEP 2: Align the fastq files with novoalign
-# 12 cores and 16g of memory
+# 12 cores and 15500mb of memory
 
 ALIGN_CMD="cd $WORKDIR &&
 for i in \$(seq 1 \`cat fqlist1 | wc -l\`)
@@ -65,10 +64,10 @@ do
 	-r Random -c 12 -o sam \$RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.novo.bam ;
 done"
 
-ALIGN_CMD="echo hi"
+#ALIGN_CMD="echo ALIGN_CMD"
 
-echo $ALIGN_CMD
-ALIGN_Q=`$QUICK_Q -m 16gb -d $NODE -t 12 -n novo_$SAMPLE -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:$MOVE_FILES_Q"`
+#echo $ALIGN_CMD
+ALIGN_Q=`$QUICK_Q -m 15500mb -d $NODE -t 12 -n novo_$SAMPLE -c " $ALIGN_CMD " -q $QUEUE -z "-W depend=afterok:$MOVE_FILES_Q"`
 
 
 
@@ -90,7 +89,7 @@ do
 done"
 
 echo $SORT_CMD
-SORT_CMD="echo hi"
+#SORT_CMD="echo SORT_CMD"
 
 SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_$SAMPLE -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"`
 
@@ -156,7 +155,7 @@ do
 
 done"
 
-GATK_CMD="echo hi"
+#GATK_CMD="echo GATK_CMD"
 
 GATK_Q=`$QUICK_Q -m 8gb -d $NODE -t 3 -n gatk_$SAMPLE -c " $GATK_CMD " -q $QUEUE -z "-W depend=afterok:$SORT_Q"`
 
@@ -175,7 +174,7 @@ do
     rm $SAMPLE.\$READGROUP.recal.bam
 done"
 
-CALMD_CMD="echo calmdcmd"
+#CALMD_CMD="echo calmd_cmd"
 
 CALMD_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n calmd_$SAMPLE -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q`
 
@@ -200,7 +199,7 @@ do
     rm $SAMPLE.\$READGROUP.recal.bq.bam
 done"
 
-MERGE_CMD="echo merge_cmd command"
+#MERGE_CMD="echo merge_cmd command"
 
 MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_$SAMPLE -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q`
 
@@ -213,9 +212,9 @@ MKDUP2_CMD="cd $WORKDIR &&
 time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.merged.bam OUTPUT=$SAMPLE.novo.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
 
 echo 'clean up files...' &&
-rm $SAMPLE.merged.bam"
+rm $SAMPLE.merged.bam $SAMPLE.merged.bai"
 
-MKDUP2_CMD="echo mkdup2 command"
+#MKDUP2_CMD="echo mkdup2 command"
 
 MKDUP2_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n mkdup2_$SAMPLE -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q`
 
@@ -242,9 +241,11 @@ RESTORE_CMD="cd $WORKDIR &&
 rsync -rv $SAMPLE.novo.bam $SAMPLE.novo.bai $SAMPLE.novo.reduced.bam $SAMPLE.novo.reduced.bai $SAMPLEDIR &&
 
 echo 'removing scratch directory...' &&
-echo 'rm -r $WORKDIR' &&
+rm -r $WORKDIR &&
 
 echo $SAMPLE >> $SAMPLEDIR/../completed.txt"
+
+#RESTORE_CMD="echo RESTORE_CMD"
 
 RESTORE_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n restore_$SAMPLE -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
 
