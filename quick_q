@@ -23,10 +23,11 @@ OPTIONS can be:
   -n  name     Name (default quick_q)
   -c  cmd      Command
   -q  queue    Queue name
-  -M  mail     Mail results
+  -p  priority Job priority (int [-1024,1023], default: 0)
   -o  output   Path for stdout of job (default jobname.ojobid)
   -e  error    Path for stderr of job (default jobname.ejobid)
   -W  attr     Additional attributes
+  -M  mail     Mail results
   -z  other    Other qsub parameters
 EOF
 }
@@ -44,13 +45,14 @@ THREADS=1
 DEVICE=1
 CMD=1
 QUEUE=
+PRIORITY=0
 OUTPUT=
 ERROR=
 OTHER=
 MAIL=false
 
 # Check options passed in.
-while getopts "h m:t:n:c:d:q:o:e:W:u:z: M" OPTION
+while getopts "h m:t:n:c:d:q:p:o:e:W:u:z: M" OPTION
 do
     case $OPTION in
         h)
@@ -75,6 +77,9 @@ do
         q)
             QUEUE=$OPTARG
             ;;
+	p)
+	    PRIORITY=$OPTARG
+	    ;;
 	o)
 	    OUTPUT=$OPTARG
 	    ;;
@@ -103,7 +108,7 @@ QSUB=/usr/local/bin/qsub
 # for pbs_version = PBSPro_11.2.0.113417
 #QSUB_CMD="$QSUB -l select=$DEVICE:mem=$MEM:ncpus=$THREADS -m bae -N $NAME -M rl6sf@virginia.edu"
 # for version: 3.0.3
-QSUB_CMD="$QSUB -l nodes=$DEVICE:ppn=$THREADS,mem=$MEM -N $NAME"
+QSUB_CMD="$QSUB -l nodes=$DEVICE:ppn=$THREADS,mem=$MEM -N $NAME -p $PRIORITY"
 
 if $MAIL
 then

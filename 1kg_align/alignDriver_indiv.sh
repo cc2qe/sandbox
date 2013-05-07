@@ -2,14 +2,15 @@
 
 if [ $# -lt 3 ]
 then
-    echo usage $0 [sampleList] [batchDirectory] [node]
+    echo usage $0 [sample] [sampleDirectory] [node] [dependency]
     exit 1
 fi
 
 # Directory and data names
-SAMPLELIST=$1
-BATCHDIR=$2
+SAMPLE=$1
+SAMPLEDIR=$2
 ROOTDIR=/scratch/cc2qe/1kg/batch1
+WORKDIR=$ROOTDIR/$SAMPLE
 
 # Annotations
 REF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.fa
@@ -37,25 +38,18 @@ QUICK_Q=/mnt/thor_pool1/user_data/cc2qe/code/bin/quick_q
 # copy the files to the local drive
 # Require a lot of memory for this so we don't have tons of jobs writing to drives at once
 
-MOVE_FILES_CMD="for SAMPLE in \`cat $SAMPLELIST\`
-do 
-    WORKDIR=$ROOTDIR/\$SAMPLE &&
-    SAMPLEDIR=$BATCHDIR/\$SAMPLE &&
+# This step is done in the allocateFiles.sh script, and passes that PBS dependency to this script
 
-    mkdir -p \$WORKDIR &&
-    rsync -rv \$SAMPLEDIR/* \$WORKDIR
-done"
+if [ -z $DEPENDENCY ]
+then
+    # make the working directory
+    MOVE_FILES_CMD="mkdir -p $WORKDIR &&
+        rsync -rv $SAMPLEDIR/* $WORKDIR"
 
-MOVE_FILES_CMD="echo MOVE_FILES_CMD"
+    #MOVE_FILES_CMD="echo MOVE_FILES_CMD"
 
-MOVE_FILES_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE`
-
-
-
-for SAMPLE in `cat $SAMPLELIST`
-do
-    WORKDIR=$ROOTDIR/$SAMPLE &&
-    SAMPLEDIR=$BATCHDIR/$SAMPLE &&
+    MOVE_FILES_Q=`$QUICK_Q -m 32500mb -d $NODE -t 1 -n move_${SAMPLE}_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE`
+fi
 
 
 # ---------------------
@@ -75,12 +69,12 @@ do
 	-r Random -c 8 -o sam \$RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.novo.bam ;
 done"
 
-ALIGN_CMD="echo ALIGN_CMD"
+#ALIGN_CMD="echo ALIGN_CMD"
 
 #echo $ALIGN_CMD
 
-# set a medium priority so they all align before doing GATK recalibration. 16gb mem
-ALIGN_Q=`$QUICK_Q -d $NODE -t 8 -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -p 50 -W depend=afterok:$MOVE_FILES_Q`
+# set a medium priority so they all align before doing GATK recalibration
+ALIGN_Q=`$QUICK_Q -m 16000mb -d $NODE -t 8 -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -p 50 -W depend=afterok:$MOVE_FILES_Q`
 
 
 
@@ -91,19 +85,21 @@ ALIGN_Q=`$QUICK_Q -d $NODE -t 8 -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $
 SORT_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
+
     time $SAMTOOLS view -bu $SAMPLE.\$READGROUP.novo.bam | \
-        $SAMTOOLS sort -n -o - samtools_nsort_tmp | \
+	$SAMTOOLS sort -n -o - samtools_nsort_tmp | \
 	$SAMTOOLS fixmate /dev/stdin /dev/stdout | $SAMTOOLS sort -o - samtools_csort_tmp | \
 	$SAMTOOLS fillmd -b - $REF > $SAMPLE.\$READGROUP.novo.fixed.bam &&
     
-    time $SAMTOOLS index $SAMPLE.\$READGROUP.novo.fixed.bam &&
+    $SAMTOOLS index $SAMPLE.\$READGROUP.novo.fixed.bam &&
     rm $SAMPLE.\$READGROUP.novo.bam
 done"
 
-# echo $SORT_CMD
-SORT_CMD="echo SORT_CMD"
+echo $SORT_CMD
+#SORT_CMD="echo SORT_CMD"
 
 SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"`
+
 
 
 # ---------------------
@@ -112,7 +108,7 @@ SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD "
 GATK_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
-    time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar \
+    java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar \
          INPUT=$SAMPLE.\$READGROUP.novo.fixed.bam \
          OUTPUT=$SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
          ASSUME_SORTED=TRUE \
@@ -121,7 +117,7 @@ do
          MAX_FILE_HANDLES=1000 \
          CREATE_INDEX=true &&
 
-    echo 'make the set of regions for local realignment (dont need to do this step because it is unrelated tot eh alignment. Just need to do it once globally).' &&
+    echo 'make the set of regions for local realignment (don't need to do this step because it is unrelated tot eh alignment. Just need to do it once globally).' &&
     echo 'java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp -jar $GATK -T RealignerTargetCreator -R $REF -o output.intervals -known $INDELS1 -known $INDELS2' &&
 
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
@@ -162,15 +158,13 @@ do
     rm $SAMPLE.\$READGROUP.novo.fixed.bam \
         $SAMPLE.\$READGROUP.novo.fixed.bam.bai \
         $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
-        $SAMPLE.\$READGROUP.novo.fixed.mkdup.bai \
-        $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
-        $SAMPLE.\$READGROUP.novo.realign.fixed.bai
+        $SAMPLE.\$READGROUP.novo.fixed.mkdup.bai
 
 done"
 
 #GATK_CMD="echo GATK_CMD"
 
-GATK_Q=`$QUICK_Q -m 8gb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -W depend=afterok:$SORT_Q`
+GATK_Q=`$QUICK_Q -m 8gb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -z "-W depend=afterok:$SORT_Q"`
 
 
 
@@ -180,8 +174,8 @@ GATK_Q=`$QUICK_Q -m 8gb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD "
 CALMD_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
-    time $SAMTOOLS calmd -Erb $SAMPLE.\$READGROUP.recal.bam $REF > $SAMPLE.\$READGROUP.recal.bq.bam &&
-    time $SAMTOOLS index $SAMPLE.\$READGROUP.recal.bq.bam &&
+    $SAMTOOLS calmd -Erb $SAMPLE.\$READGROUP.recal.bam $REF > $SAMPLE.\$READGROUP.recal.bq.bam &&
+    $SAMTOOLS index $SAMPLE.\$READGROUP.recal.bq.bam &&
 
     echo 'cleaning up...' &&
     rm $SAMPLE.\$READGROUP.recal.bam
@@ -205,11 +199,11 @@ do
     INPUT_STRING+=\" I=$SAMPLE.\$READGROUP.recal.bq.bam\"
 done &&
 
-time java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true &&
+java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true &&
 
 for READGROUP in \`cat rglist\`
 do
-    rm $SAMPLE.\$READGROUP.recal.bq.bam $SAMPLE.\$READGROUP.recal.bq.bam.bai
+    rm $SAMPLE.\$READGROUP.recal.bq.bam
 done"
 
 #MERGE_CMD="echo merge_cmd command"
@@ -265,7 +259,7 @@ RESTORE_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RE
 
 
 
-done
+
 
 
 
