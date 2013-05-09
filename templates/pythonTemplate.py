@@ -11,7 +11,7 @@ __date__ = "$Date: 2013-05-09 14:31 $"
 # define functions
 
 def get_args():
-    parser = argparse.ArgumentParser(description="\
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
 pythonTemplate.py\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
