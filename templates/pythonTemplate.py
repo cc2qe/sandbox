@@ -54,7 +54,10 @@ def main():
     flagC = args.flagC
     file = args.input
     
+    # call primary function
     myFunction(argA, argB, flagC, file)
+
+    # close the input file
     file.close()
 
 # initialize the script
