@@ -21,7 +21,7 @@ INTERVALS=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/output
 
 # PBS parameters
 NODE=$3
-QUEUE=primary
+QUEUE=full
 MOVE_FILES_Q=$4
 
 # Software paths
@@ -46,10 +46,9 @@ do
     rsync -rv \$SAMPLEDIR/* \$WORKDIR
 done"
 
-MOVE_FILES_CMD="echo MOVE_FILES_CMD"
+#MOVE_FILES_CMD="echo MOVE_FILES_CMD"
 
-MOVE_FILES_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE`
-
+MOVE_FILES_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE`
 
 
 for SAMPLE in `cat $SAMPLELIST`
@@ -75,13 +74,12 @@ do
 	-r Random -c 8 -o sam \$RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.novo.bam ;
 done"
 
-ALIGN_CMD="echo ALIGN_CMD"
+#ALIGN_CMD="echo ALIGN_CMD"
 
 #echo $ALIGN_CMD
 
 # set a medium priority so they all align before doing GATK recalibration. 16gb mem
-ALIGN_Q=`$QUICK_Q -d $NODE -t 8 -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -p 50 -W depend=afterok:$MOVE_FILES_Q`
-
+ALIGN_Q=`$QUICK_Q -d $NODE -t 8 -m 16gb -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -p 0 -W depend=afterok:$MOVE_FILES_Q`
 
 
 # ---------------------
@@ -101,7 +99,7 @@ do
 done"
 
 # echo $SORT_CMD
-SORT_CMD="echo SORT_CMD"
+#SORT_CMD="echo SORT_CMD"
 
 SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"`
 
@@ -197,20 +195,31 @@ CALMD_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n calmd_${SAMPLE}_${NODE} -c " $CALMD_
 # STEP 7: Merging files
 # Using Picard instead of samtools because it does a better job of preserving header information
 
-MERGE_CMD="cd $WORKDIR &&
+# only merge if there are multiple readgroups
+MERGE_CMD="
+cd $WORKDIR &&
+if [ \`cat rglist | wc -l\` -gt 1 ] ;
+then
+    INPUT_STRING='' &&
+    for READGROUP in \`cat rglist\`
+    do
+        INPUT_STRING+=\" I=$SAMPLE.\$READGROUP.recal.bq.bam\"
+    done &&
 
-INPUT_STRING='' &&
-for READGROUP in \`cat rglist\`
-do
-    INPUT_STRING+=\" I=$SAMPLE.\$READGROUP.recal.bq.bam\"
-done &&
+    time java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true &&
 
-time java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true &&
-
-for READGROUP in \`cat rglist\`
-do
-    rm $SAMPLE.\$READGROUP.recal.bq.bam $SAMPLE.\$READGROUP.recal.bq.bam.bai
-done"
+    for READGROUP in \`cat rglist\`
+    do
+        rm $SAMPLE.\$READGROUP.recal.bq.bam $SAMPLE.\$READGROUP.recal.bq.bam.bai
+    done
+else
+    for READGROUP in \`head -n 1 rglist\`
+    do
+        mv $SAMPLE.\$READGROUP.recal.bq.bam $SAMPLE.novo.bam &&
+        mv $SAMPLE.\$READGROUP.recal.bq.bam.bai $SAMPLE.novo.bai
+    done
+fi
+"
 
 #MERGE_CMD="echo merge_cmd command"
 
@@ -220,12 +229,16 @@ MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CM
 # -----------------------
 # STEP 8: Mark duplicates again following the merge.
 
-MKDUP2_CMD="cd $WORKDIR &&
+MKDUP2_CMD="
+cd $WORKDIR &&
+if [ \`cat rglist | wc -l\` -gt 1 ] ;
+then
+    time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.merged.bam OUTPUT=$SAMPLE.novo.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
 
-time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.merged.bam OUTPUT=$SAMPLE.novo.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
-
-echo 'clean up files...' &&
-rm $SAMPLE.merged.bam $SAMPLE.merged.bai"
+    echo 'clean up files...' &&
+    rm $SAMPLE.merged.bam $SAMPLE.merged.bai
+fi
+"
 
 #MKDUP2_CMD="echo mkdup2 command"
 
@@ -251,7 +264,7 @@ REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUC
 # STEP 10: Move back to hall13 and cleanup.
 
 RESTORE_CMD="cd $WORKDIR &&
-rsync -rv $SAMPLE.novo.bam $SAMPLE.novo.bai $SAMPLE.novo.reduced.bam $SAMPLE.novo.reduced.bai $SAMPLEDIR &&
+rsync -rv $SAMPLE.novo.bam $SAMPLE.novo.bai $SAMPLE.novo.reduced.bam $SAMPLE.novo.reduced.bai *.recal_data.grp $SAMPLEDIR &&
 
 echo 'removing scratch directory...' &&
 rm -r $WORKDIR &&
@@ -261,8 +274,6 @@ echo $SAMPLE >> $SAMPLEDIR/../completed.txt"
 #RESTORE_CMD="echo RESTORE_CMD"
 
 RESTORE_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
-
-
 
 
 done
