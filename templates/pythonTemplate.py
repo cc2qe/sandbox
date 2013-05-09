@@ -1,10 +1,40 @@
 #!/usr/bin/env python
 
 import argparse, sys
+from argparse import RawTextHelpFormatter
+
+__author__ = "Author (email@site.com)"
+__version__ = "$Revision: 0.0.1 $"
+__date__ = "$Date: 2013-05-09 14:31 $"
 
 # --------------------------------------
 # define functions
 
+def get_args():
+    parser = argparse.ArgumentParser(description="\
+pythonTemplate.py\n\
+author: " + __author__ + "\n\
+version: " + __version__ + "\n\
+description: Basic python script template")
+    parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
+    parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
+    parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
+    parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='file to read. If \'-\' or absent then defaults \
+to stdin.')
+
+    # parse the arguments
+    args = parser.parse_args()
+
+    # if no bedfile, check if part of pipe and if so, read stdin.
+    if args.input == None:
+        if sys.stdin.isatty():
+            parser.print_help()
+            exit(1)
+        else:
+            args.input = sys.stdin
+    return args
+
+# primary function
 def myFunction(argA, argB, flagC, file):
     for line in file:
         print line.rstrip()
@@ -15,20 +45,14 @@ def myFunction(argA, argB, flagC, file):
 # argument parsing
 
 def main():
-    parser = argparse.ArgumentParser(description="Basic python script template")
-    parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
-    parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
-    parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
-    parser.add_argument('file', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='file to read. If \'-\' or absent then defaults to stdin.')
-    
-    # parse the arguments
-    args = parser.parse_args()
+    # parse the command line args
+    args = get_args()
 
     # store into global values
     argA = args.argA
     argB = args.argB
     flagC = args.flagC
-    file = args.file
+    file = args.input
     
     myFunction(argA, argB, flagC, file)
     file.close()
