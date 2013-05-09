@@ -25,7 +25,7 @@ to stdin.')
     # parse the arguments
     args = parser.parse_args()
 
-    # if no bedfile, check if part of pipe and if so, read stdin.
+    # if no input, check if part of pipe and if so, read stdin.
     if args.input == None:
         if sys.stdin.isatty():
             parser.print_help()
