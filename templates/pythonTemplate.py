@@ -42,7 +42,7 @@ def myFunction(argA, argB, flagC, file):
     return
 
 # --------------------------------------
-# argument parsing
+# main function
 
 def main():
     # parse the command line args
