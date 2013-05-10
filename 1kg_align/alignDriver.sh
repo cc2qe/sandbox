@@ -21,11 +21,12 @@ INTERVALS=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/output
 
 # PBS parameters
 NODE=$3
-QUEUE=full
+QUEUE=primary
 MOVE_FILES_Q=$4
 
 # Software paths
-NOVOALIGN=/shared/external_bin/novoalign
+#NOVOALIGN=/shared/external_bin/novoalign
+NOVOALIGN=/shared/external_bin/novocraft-2.08.03/novoalign
 GATK=/shared/external_bin/GenomeAnalysisTK-2.4-9/GenomeAnalysisTK.jar
 SAMTOOLS=/shared/bin/samtools
 PICARD=/mnt/thor_pool1/user_data/cc2qe/software/picard-tools-1.90
@@ -43,7 +44,7 @@ do
     SAMPLEDIR=$BATCHDIR/\$SAMPLE &&
 
     mkdir -p \$WORKDIR &&
-    rsync -rv \$SAMPLEDIR/* \$WORKDIR
+    rsync -rv \$SAMPLEDIR/fqlist* \$SAMPLEDIR/rglist \$SAMPLEDIR/*_readgroup.txt \$SAMPLEDIR/*.fastq.gz \$WORKDIR
 done"
 
 #MOVE_FILES_CMD="echo MOVE_FILES_CMD"
@@ -59,7 +60,7 @@ do
 
 # ---------------------
 # STEP 2: Align the fastq files with novoalign
-# 8 cores and 16000mb of memory
+# 8 cores and 15500mb of memory
 
 ALIGN_CMD="cd $WORKDIR &&
 for i in \$(seq 1 \`cat fqlist1 | wc -l\`)
@@ -78,8 +79,8 @@ done"
 
 #echo $ALIGN_CMD
 
-# set a medium priority so they all align before doing GATK recalibration. 16gb mem
-ALIGN_Q=`$QUICK_Q -d $NODE -t 8 -m 16gb -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -p 0 -W depend=afterok:$MOVE_FILES_Q`
+# 16gb mem
+ALIGN_Q=`$QUICK_Q -d $NODE -t 8 -m 15500mb -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q`
 
 
 # ---------------------
@@ -187,7 +188,7 @@ done"
 
 #CALMD_CMD="echo calmd_cmd"
 
-CALMD_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n calmd_${SAMPLE}_${NODE} -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q`
+CALMD_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n calmd_${SAMPLE}_${NODE} -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q`
 
 
 
@@ -273,7 +274,7 @@ echo $SAMPLE >> $SAMPLEDIR/../completed.txt"
 
 #RESTORE_CMD="echo RESTORE_CMD"
 
-RESTORE_Q=`$QUICK_Q -m 512mb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
+RESTORE_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
 
 
 done
