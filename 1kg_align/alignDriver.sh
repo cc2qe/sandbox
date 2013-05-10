@@ -17,7 +17,6 @@ NOVOREF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.k14
 INDELS1=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.indels_mills_devine_hg19_leftAligned_collapsed_double_hit.indels.sites.vcf.gz
 INDELS2=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.low_coverage_vqsr.20101123.indels.sites.vcf.gz
 DBSNP=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.dbsnp.build135.snps.sites.vcf.gz
-INTERVALS=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/output.intervals
 
 # PBS parameters
 NODE=$3
@@ -120,15 +119,21 @@ do
          MAX_FILE_HANDLES=1000 \
          CREATE_INDEX=true &&
 
-    echo 'make the set of regions for local realignment (dont need to do this step because it is unrelated tot eh alignment. Just need to do it once globally).' &&
-    echo 'java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp -jar $GATK -T RealignerTargetCreator -R $REF -o output.intervals -known $INDELS1 -known $INDELS2' &&
+    time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp -jar $GATK \
+        -T RealignerTargetCreator \
+        -nt 3 \
+        -R $REF \
+        -I $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
+        -o $SAMPLE.\$READGROUP.intervals \
+        -known $INDELS1 \
+        -known $INDELS2 &&
 
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
          -T IndelRealigner \
          -R $REF \
          -I $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
          -o $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
-         -targetIntervals $INTERVALS \
+         -targetIntervals $SAMPLE.\$READGROUP.intervals \
          -known $INDELS1 \
          -known $INDELS2 \
          -LOD 0.4 \
@@ -265,7 +270,11 @@ REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUC
 # STEP 10: Move back to hall13 and cleanup.
 
 RESTORE_CMD="cd $WORKDIR &&
-rsync -rv $SAMPLE.novo.bam $SAMPLE.novo.bai $SAMPLE.novo.reduced.bam $SAMPLE.novo.reduced.bai *.recal_data.grp $SAMPLEDIR &&
+rsync -rv $SAMPLE.novo.bam $SAMPLE.novo.bai \
+    $SAMPLE.novo.reduced.bam $SAMPLE.novo.reduced.bai \
+    *.recal_data.grp \
+    *.intervals \
+    $SAMPLEDIR &&
 
 echo 'removing scratch directory...' &&
 rm -r $WORKDIR &&
