@@ -140,31 +140,30 @@ int main (int argc, char **argv)
     }
 
     for (i = 0; i < num_loci; ++i) {
-        for (j = 0; j < num_loci; ++j) {
-            if (i!=j)  {
-                for (k = 0; k < num_loci; ++k) {
-                    if ( (i!=k) && (j!=k) ) {
-                        get_expected(rates[i],
-                                     rates[j],
-                                     rates[k],
-                                     num_genotype,
-                                     expected);
-
-                        get_observed(M[i],
-                                     M[j],
-                                     M[k],
-                                     num_genotype,
-                                     observed);
-
-                        x = get_X(observed,expected);
-                        printf("%f\n",x);
-                        ++total;
-                        if (total==1000000)
-                            return 0;
-                    }
-                }
-            }
-        }
+      for (j = i + 1; j < num_loci; ++j) {
+	  
+	for (k = j + 1; k < num_loci; ++k) {
+	  get_expected(rates[i],
+		       rates[j],
+		       rates[k],
+		       num_genotype,
+		       expected);
+	  
+	  get_observed(M[i],
+		       M[j],
+		       M[k],
+		       num_genotype,
+		       observed);
+	  
+	  x = get_X(observed,expected);
+	  printf("%f\n",x);
+	  ++total;
+	  if (total==1000000)
+	    return 0;
+	  
+	}
+	
+      }
     }
 
     return 0;
