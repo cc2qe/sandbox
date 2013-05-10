@@ -2,6 +2,7 @@
 USER=`whoami`
 JOBS_Q=`qselect -u $USER -s Q`
 JOBS_R=`qselect -u $USER -s R`
+JOBS_H=`qselect -u $USER -s H`
 
 echo "Queued jobs..."
 echo $JOBS_Q
@@ -9,14 +10,23 @@ echo $JOBS_Q
 echo "Running jobs..."
 echo $JOBS_R
 
+echo "Held jobs..."
+echo $JOBS_H
+
 for JOB in $JOBS_Q
 do
-	qdel $JOB
+    qdel $JOB
 done
 
 for JOB in $JOBS_R
 do
-	qdel $JOB
+    qdel $JOB
 done
+
+for JOB in $JOBS_H
+do
+    qdel $JOB
+done
+
 #qselect -u $USER -s Q | xargs qdel
 #qselect -u $USER -s R | xargs qdel
