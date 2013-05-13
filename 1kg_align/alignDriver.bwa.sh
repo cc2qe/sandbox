@@ -62,7 +62,7 @@ do
 
 # ---------------------
 # STEP 2: Align the fastq files with novoalign
-# 3 cores and 6000mb of memory
+# 2 cores and 5000mb of memory
 
 ALIGN_CMD="cd $WORKDIR &&
 for i in \$(seq 1 \`cat fqlist1 | wc -l\`)
@@ -75,10 +75,13 @@ do
 
     echo \$READGROUP &&
 
-    time $BWA aln -t 3 -q 15 -f $SAMPLE.\${READGROUP}_1.sai $REF \$FASTQ1 &&
-    time $BWA aln -t 3 -q 15 -f $SAMPLE.\${READGROUP}_2.sai $REF \$FASTQ2 &&
+    time $BWA aln -t 2 -q 15 -f $SAMPLE.\${READGROUP}_1.sai $REF \$FASTQ1 &&
+    time $BWA aln -t 2 -q 15 -f $SAMPLE.\${READGROUP}_2.sai $REF \$FASTQ2 &&
 
-    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.bam
+    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.bam &&
+
+    echo 'cleaning up...' &&
+    rm *.fastq.gz *.sai
 
 done"
 
@@ -86,8 +89,7 @@ done"
 
 #echo $ALIGN_CMD
 
-# 16gb mem
-ALIGN_Q=`$QUICK_Q -d $NODE -t 3 -m 6000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q`
+ALIGN_Q=`$QUICK_Q -d $NODE -t 2 -m 5000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q`
 
 
 # ---------------------
