@@ -13,7 +13,7 @@ ROOTDIR=/scratch/cc2qe/1kg/batch1
 
 # Annotations
 REF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.fa
-NOVOREF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.k14s1.novoindex
+#NOVOREF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.k14s1.novoindex
 INDELS1=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.indels_mills_devine_hg19_leftAligned_collapsed_double_hit.indels.sites.vcf.gz
 INDELS2=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.low_coverage_vqsr.20101123.indels.sites.vcf.gz
 DBSNP=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.dbsnp.build135.snps.sites.vcf.gz
@@ -81,7 +81,7 @@ do
     time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.bam &&
 
     echo 'cleaning up...' &&
-    rm *.fastq.gz *.sai
+    rm \$FASTQ1 \$FASTQ2 $SAMPLE.\${READGROUP}_*.sai
 
 done"
 
@@ -129,6 +129,10 @@ do
          MAX_FILE_HANDLES=1000 \
          CREATE_INDEX=true &&
 
+    echo 'cleaning up fixed.bams...' &&
+    rm $SAMPLE.\$READGROUP.bwa.fixed.bam \
+        $SAMPLE.\$READGROUP.bwa.fixed.bam.bai &&
+
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp -jar $GATK \
         -T RealignerTargetCreator \
         -nt 3 \
@@ -148,6 +152,10 @@ do
          -known $INDELS2 \
          -LOD 0.4 \
          -model KNOWNS_ONLY &&
+
+    echo 'cleaning up fixed.mkdup.bam...' &&
+    rm $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
+        $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bai &&
 
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
         -T BaseRecalibrator \
@@ -172,11 +180,7 @@ do
         -o $SAMPLE.\$READGROUP.bwa.recal.bam &&
 
     echo 'cleaning up...' &&
-    rm $SAMPLE.\$READGROUP.bwa.fixed.bam \
-        $SAMPLE.\$READGROUP.bwa.fixed.bam.bai \
-        $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
-        $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bai \
-        $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
+    rm $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
         $SAMPLE.\$READGROUP.bwa.realign.fixed.bai
 
 done"
