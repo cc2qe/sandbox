@@ -21,12 +21,13 @@ DBSNP=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/annotations/ALL.wgs.db
 # PBS parameters
 NODE=$3
 QUEUE=primary
-MOVE_FILES_Q=$4
 
 # Software paths
+BWA=/shared/bin/bwa-0.7.4/bwa0.7.4
 #NOVOALIGN=/shared/external_bin/novoalign
 NOVOALIGN=/shared/external_bin/novocraft-2.08.03/novoalign
-GATK=/shared/external_bin/GenomeAnalysisTK-2.4-9/GenomeAnalysisTK.jar
+GATK=/shared/external_bin/GenomeAnalysisTK-2.5-2-gf57256b/GenomeAnalysisTK.jar
+# samtools 0.1.18
 SAMTOOLS=/shared/bin/samtools
 PICARD=/mnt/thor_pool1/user_data/cc2qe/software/picard-tools-1.90
 QUICK_Q=/mnt/thor_pool1/user_data/cc2qe/code/bin/quick_q
@@ -48,6 +49,8 @@ done"
 
 #MOVE_FILES_CMD="echo MOVE_FILES_CMD"
 
+
+
 MOVE_FILES_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE`
 
 
@@ -59,7 +62,7 @@ do
 
 # ---------------------
 # STEP 2: Align the fastq files with novoalign
-# 8 cores and 15500mb of memory
+# 3 cores and 6000mb of memory
 
 ALIGN_CMD="cd $WORKDIR &&
 for i in \$(seq 1 \`cat fqlist1 | wc -l\`)
@@ -70,8 +73,13 @@ do
 
     RGSTRING=\`cat \${READGROUP}_readgroup.txt\` &&
 
-    time $NOVOALIGN -d $NOVOREF -f \$FASTQ1 \$FASTQ2 \
-	-r Random -c 8 -o sam \$RGSTRING | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.novo.bam ;
+    echo \$READGROUP &&
+
+    time $BWA aln -t 3 -q 15 -f $SAMPLE.\${READGROUP}_1.sai $REF \$FASTQ1 &&
+    time $BWA aln -t 3 -q 15 -f $SAMPLE.\${READGROUP}_2.sai $REF \$FASTQ2 &&
+
+    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.bam
+
 done"
 
 #ALIGN_CMD="echo ALIGN_CMD"
@@ -79,7 +87,7 @@ done"
 #echo $ALIGN_CMD
 
 # 16gb mem
-ALIGN_Q=`$QUICK_Q -d $NODE -t 8 -m 15500mb -n novo_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q`
+ALIGN_Q=`$QUICK_Q -d $NODE -t 3 -m 6000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q`
 
 
 # ---------------------
@@ -89,13 +97,13 @@ ALIGN_Q=`$QUICK_Q -d $NODE -t 8 -m 15500mb -n novo_${SAMPLE}_${NODE} -c " $ALIGN
 SORT_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
-    time $SAMTOOLS view -bu $SAMPLE.\$READGROUP.novo.bam | \
+    time $SAMTOOLS view -bu $SAMPLE.\$READGROUP.bwa.bam | \
         $SAMTOOLS sort -n -o - samtools_nsort_tmp | \
 	$SAMTOOLS fixmate /dev/stdin /dev/stdout | $SAMTOOLS sort -o - samtools_csort_tmp | \
-	$SAMTOOLS fillmd -b - $REF > $SAMPLE.\$READGROUP.novo.fixed.bam &&
+	$SAMTOOLS fillmd -b - $REF > $SAMPLE.\$READGROUP.bwa.fixed.bam &&
     
-    time $SAMTOOLS index $SAMPLE.\$READGROUP.novo.fixed.bam &&
-    rm $SAMPLE.\$READGROUP.novo.bam
+    time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.fixed.bam &&
+    rm $SAMPLE.\$READGROUP.bwa.bam
 done"
 
 # echo $SORT_CMD
@@ -111,8 +119,8 @@ GATK_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar \
-         INPUT=$SAMPLE.\$READGROUP.novo.fixed.bam \
-         OUTPUT=$SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
+         INPUT=$SAMPLE.\$READGROUP.bwa.fixed.bam \
+         OUTPUT=$SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
          ASSUME_SORTED=TRUE \
          METRICS_FILE=/dev/null \
          VALIDATION_STRINGENCY=SILENT \
@@ -123,7 +131,7 @@ do
         -T RealignerTargetCreator \
         -nt 3 \
         -R $REF \
-        -I $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
+        -I $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
         -o $SAMPLE.\$READGROUP.intervals \
         -known $INDELS1 \
         -known $INDELS2 &&
@@ -131,8 +139,8 @@ do
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
          -T IndelRealigner \
          -R $REF \
-         -I $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
-         -o $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
+         -I $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
+         -o $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
          -targetIntervals $SAMPLE.\$READGROUP.intervals \
          -known $INDELS1 \
          -known $INDELS2 \
@@ -142,7 +150,7 @@ do
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
         -T BaseRecalibrator \
         -nct 3 \
-        -I $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
+        -I $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
         -R $REF \
         -knownSites $DBSNP \
         -l INFO \
@@ -152,23 +160,22 @@ do
         -cov ContextCovariate \
         -o $SAMPLE.\$READGROUP.recal_data.grp &&
 
-
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
         -T PrintReads \
         -R $REF \
-        -I $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
+        -I $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
         -BQSR $SAMPLE.\$READGROUP.recal_data.grp \
         --disable_bam_indexing \
         -l INFO \
-        -o $SAMPLE.\$READGROUP.recal.bam &&
+        -o $SAMPLE.\$READGROUP.bwa.recal.bam &&
 
     echo 'cleaning up...' &&
-    rm $SAMPLE.\$READGROUP.novo.fixed.bam \
-        $SAMPLE.\$READGROUP.novo.fixed.bam.bai \
-        $SAMPLE.\$READGROUP.novo.fixed.mkdup.bam \
-        $SAMPLE.\$READGROUP.novo.fixed.mkdup.bai \
-        $SAMPLE.\$READGROUP.novo.realign.fixed.bam \
-        $SAMPLE.\$READGROUP.novo.realign.fixed.bai
+    rm $SAMPLE.\$READGROUP.bwa.fixed.bam \
+        $SAMPLE.\$READGROUP.bwa.fixed.bam.bai \
+        $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
+        $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bai \
+        $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
+        $SAMPLE.\$READGROUP.bwa.realign.fixed.bai
 
 done"
 
@@ -184,11 +191,11 @@ GATK_Q=`$QUICK_Q -m 8gb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD "
 CALMD_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
-    time $SAMTOOLS calmd -Erb $SAMPLE.\$READGROUP.recal.bam $REF > $SAMPLE.\$READGROUP.recal.bq.bam &&
-    time $SAMTOOLS index $SAMPLE.\$READGROUP.recal.bq.bam &&
+    time $SAMTOOLS calmd -Erb $SAMPLE.\$READGROUP.bwa.recal.bam $REF > $SAMPLE.\$READGROUP.bwa.recal.bq.bam &&
+    time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.recal.bq.bam &&
 
     echo 'cleaning up...' &&
-    rm $SAMPLE.\$READGROUP.recal.bam
+    rm $SAMPLE.\$READGROUP.bwa.recal.bam
 done"
 
 #CALMD_CMD="echo calmd_cmd"
@@ -209,20 +216,20 @@ then
     INPUT_STRING='' &&
     for READGROUP in \`cat rglist\`
     do
-        INPUT_STRING+=\" I=$SAMPLE.\$READGROUP.recal.bq.bam\"
+        INPUT_STRING+=\" I=$SAMPLE.\$READGROUP.bwa.recal.bq.bam\"
     done &&
 
-    time java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true &&
+    time java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.bwa.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true &&
 
     for READGROUP in \`cat rglist\`
     do
-        rm $SAMPLE.\$READGROUP.recal.bq.bam $SAMPLE.\$READGROUP.recal.bq.bam.bai
+        rm $SAMPLE.\$READGROUP.bwa.recal.bq.bam $SAMPLE.\$READGROUP.bwa.recal.bq.bam.bai
     done
 else
     for READGROUP in \`head -n 1 rglist\`
     do
-        mv $SAMPLE.\$READGROUP.recal.bq.bam $SAMPLE.novo.bam &&
-        mv $SAMPLE.\$READGROUP.recal.bq.bam.bai $SAMPLE.novo.bai
+        mv $SAMPLE.\$READGROUP.bwa.recal.bq.bam $SAMPLE.bwa.bam &&
+        mv $SAMPLE.\$READGROUP.bwa.recal.bq.bam.bai $SAMPLE.bwa.bai
     done
 fi
 "
@@ -239,10 +246,10 @@ MKDUP2_CMD="
 cd $WORKDIR &&
 if [ \`cat rglist | wc -l\` -gt 1 ] ;
 then
-    time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.merged.bam OUTPUT=$SAMPLE.novo.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
+    time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.bwa.merged.bam OUTPUT=$SAMPLE.bwa.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
 
     echo 'clean up files...' &&
-    rm $SAMPLE.merged.bam $SAMPLE.merged.bai
+    rm $SAMPLE.bwa.merged.bam $SAMPLE.bwa.merged.bai
 fi
 "
 
@@ -258,8 +265,8 @@ REDUCE_CMD="cd $WORKDIR &&
 time java -Xmx16g -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
     -T ReduceReads \
     -R $REF \
-    -I $SAMPLE.novo.bam \
-    -o $SAMPLE.novo.reduced.bam"
+    -I $SAMPLE.bwa.bam \
+    -o $SAMPLE.bwa.reduced.bam"
 
 #REDUCE_CMD="echo reduce command"
 
@@ -270,8 +277,8 @@ REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUC
 # STEP 10: Move back to hall13 and cleanup.
 
 RESTORE_CMD="cd $WORKDIR &&
-rsync -rv $SAMPLE.novo.bam $SAMPLE.novo.bai \
-    $SAMPLE.novo.reduced.bam $SAMPLE.novo.reduced.bai \
+rsync -rv $SAMPLE.bwa.bam $SAMPLE.bwa.bai \
+    $SAMPLE.bwa.reduced.bam $SAMPLE.bwa.reduced.bai \
     *.recal_data.grp \
     *.intervals \
     $SAMPLEDIR &&
