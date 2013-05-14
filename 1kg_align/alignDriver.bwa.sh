@@ -61,7 +61,7 @@ do
 
 
 # ---------------------
-# STEP 2: Align the fastq files with novoalign
+# STEP 2: Align the fastq files with bwa-0.7.4
 # 2 cores and 5000mb of memory
 
 ALIGN_CMD="cd $WORKDIR &&
@@ -129,10 +129,6 @@ do
          MAX_FILE_HANDLES=1000 \
          CREATE_INDEX=true &&
 
-    echo 'cleaning up fixed.bams...' &&
-    rm $SAMPLE.\$READGROUP.bwa.fixed.bam \
-        $SAMPLE.\$READGROUP.bwa.fixed.bam.bai &&
-
     time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp -jar $GATK \
         -T RealignerTargetCreator \
         -nt 3 \
@@ -181,7 +177,9 @@ do
 
     echo 'cleaning up...' &&
     rm $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
-        $SAMPLE.\$READGROUP.bwa.realign.fixed.bai
+        $SAMPLE.\$READGROUP.bwa.realign.fixed.bai \
+        $SAMPLE.\$READGROUP.bwa.fixed.bam \
+        $SAMPLE.\$READGROUP.bwa.fixed.bam.bai &&
 
 done"
 
