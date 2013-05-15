@@ -19,7 +19,7 @@ double get_X(double *observed,
 void get_expected(double *rates_1,
                   double *rates_2,
                   double *rates_3,
-                  int num_genotype,
+                  int num_samples,
                   double *d_expected)
 {
   int i,j,k;
@@ -29,64 +29,64 @@ void get_expected(double *rates_1,
 	d_expected[9*i + 3*j + 1*k] = rates_1[i] * 
 	  rates_2[j] *
 	  rates_3[k] * 
-	  num_genotype;
+	  num_samples;
       }
 }
 
 void *get_observed(int *loci_1,
                    int *loci_2,
                    int *loci_3,
-                   int num_genotype,
+                   int num_samples,
                    double *d_observed)
 {
   int i;
   for (i = 0; i < 27; ++i) 
     d_observed[i]=0;
   
-  int geno_type;
-  for (i = 0; i < num_genotype; ++i) {
-    geno_type = 9 * loci_1[i] +
+  int genotype;
+  for (i = 0; i < num_samples; ++i) {
+    genotype = 9 * loci_1[i] +
       3 * loci_2[i] +
       1 * loci_3[i];
-    d_observed[geno_type] += 1;
+    d_observed[genotype] += 1;
   }
 }
 
 void get_rates(int *loci, 
-               int num_genotype,
+               int num_samples,
                double *rates)
 {
-  int num_homo_ref = 0,
-    num_hetro_ref = 0,
-    num_homo_alt = 0;
+  int num_hom_ref = 0,
+    num_het = 0,
+    num_hom_alt = 0;
   
   int i,loci_i;
-  for (i = 0; i < num_genotype; ++i) {
+  for (i = 0; i < num_samples; ++i) {
     loci_i = loci[i];
     if (loci_i == 0) 
-      ++num_homo_ref;
+      ++num_hom_ref;
     else if (loci_i == 1)
-      ++num_hetro_ref;
+      ++num_het;
     else
-      ++num_homo_alt;
+      ++num_hom_alt;
   }
 
-  int total = num_homo_ref + num_hetro_ref + num_homo_alt;
+  int total = num_hom_ref + num_het + num_hom_alt;
   
-  rates[0] = ((double)num_homo_ref) / ((double)total);
-  rates[1] = ((double)num_hetro_ref) / ((double)total);
-  rates[2] = ((double)num_homo_alt) / ((double)total);
+  rates[0] = ((double)num_hom_ref) / ((double)total);
+  rates[1] = ((double)num_het) / ((double)total);
+  rates[2] = ((double)num_hom_alt) / ((double)total);
 }
  
 int main (int argc, char **argv)
 {
   if (argc != 4) {
-    printf("usage %s: <file> <num genotypes> <num loci>\n", argv[0]);
+    printf("usage %s: <file> <num samples> <num loci>\n", argv[0]);
     return 1;
   }
   
   char *file_name = argv[1];
-  int num_genotype = atoi(argv[2]);
+  int num_samples = atoi(argv[2]);
   int num_loci = atoi(argv[3]);
   int max_line = 5000;
   char *sep = "\t";
@@ -110,12 +110,12 @@ int main (int argc, char **argv)
     char *rate_4 = strtok(NULL, sep);
     char *rate_5 = strtok(NULL, sep);
     
-    int *loci = (int *) malloc(num_genotype * sizeof(int));
+    int *loci = (int *) malloc(num_samples * sizeof(int));
     
     int i = 0;
     
     char *tok = strtok(NULL,sep);
-    while ((tok != NULL) && (i < num_genotype)) {
+    while ((tok != NULL) && (i < num_samples)) {
       loci[i] = atoi(tok);
       tok = strtok(NULL,sep);
       ++i;
@@ -135,7 +135,7 @@ int main (int argc, char **argv)
   double *rates[num_loci];
   for (i = 0; i < num_loci; ++i) {
     double *rate = (double *) malloc(3 * sizeof(double));
-    get_rates(M[i], num_genotype, rate);
+    get_rates(M[i], num_samples, rate);
     rates[i] = rate;
   }
   
@@ -145,13 +145,13 @@ int main (int argc, char **argv)
 	get_expected(rates[i],
 		     rates[j],
 		     rates[k],
-		     num_genotype,
+		     num_samples,
 		     expected);
 	
 	get_observed(M[i],
 		     M[j],
 		     M[k],
-		     num_genotype,
+		     num_samples,
 		     observed);
 	
 	x = get_X(observed,expected);
