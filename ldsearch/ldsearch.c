@@ -97,7 +97,7 @@ int main (int argc, char **argv)
   
   int *M[num_loci];
   
-  //chr1  69510   OR4F5   0.65    0.64    0.32    0.87    0.69    2
+  //chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
   int j = 0;
   while (fgets(line, max_line, f) != NULL) {
     char *chr = strtok(line, sep);
