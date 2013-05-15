@@ -156,7 +156,10 @@ int main (int argc, char **argv)
       for (k = j + 1; k < num_loci; ++k) {
 	// only calc chi-square if loci are each separated by
 	// minimum distance
-	
+	if (strcmp(chrArr[i],chrArr[j]) == 0 && locArr[j] - locArr[i] < min_distance) {
+	  printf("equalstrings");
+
+	}
 	
 	get_expected(rates[i],
 		     rates[j],
