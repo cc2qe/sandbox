@@ -80,14 +80,15 @@ void get_rates(int *loci,
  
 int main (int argc, char **argv)
 {
-  if (argc != 4) {
-    printf("usage %s: <file> <num samples> <num loci>\n", argv[0]);
+  if (argc != 5) {
+    printf("usage %s: <file> <num samples> <num loci> <min distance>\n", argv[0]);
     return 1;
   }
   
   char *file_name = argv[1];
   int num_samples = atoi(argv[2]);
   int num_loci = atoi(argv[3]);
+  int min_distance = atoi(argv[4]);
   int max_line = 5000;
   char *sep = "\t";
   
@@ -95,9 +96,16 @@ int main (int argc, char **argv)
   
   char line[max_line];
   
+  char *chrArr[num_loci];
+  int locArr[num_loci];
+  char *geneArr[num_loci];
+
+
+  // array of arrays containing genotype info for each sample
+  // at each locus
   int *M[num_loci];
   
-  //chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
+  // chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
   int j = 0;
   while (fgets(line, max_line, f) != NULL) {
     char *chr = strtok(line, sep);
@@ -109,11 +117,15 @@ int main (int argc, char **argv)
     char *rate_3 = strtok(NULL, sep);
     char *rate_4 = strtok(NULL, sep);
     char *rate_5 = strtok(NULL, sep);
-    
+
+    chrArr[j] = strdup(chr);
+    locArr[j] = loc;
+    geneArr[j] = strdup(gene);
+
     int *loci = (int *) malloc(num_samples * sizeof(int));
     
     int i = 0;
-    
+
     char *tok = strtok(NULL,sep);
     while ((tok != NULL) && (i < num_samples)) {
       loci[i] = atoi(tok);
@@ -142,6 +154,10 @@ int main (int argc, char **argv)
   for (i = 0; i < num_loci; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       for (k = j + 1; k < num_loci; ++k) {
+	// only calc chi-square if loci are each separated by
+	// minimum distance
+	
+	
 	get_expected(rates[i],
 		     rates[j],
 		     rates[k],
@@ -155,7 +171,7 @@ int main (int argc, char **argv)
 		     observed);
 	
 	x = get_X(observed,expected);
-	printf("%f\n",x);
+	printf("%s\t%d\t%s\t%s\t%d\t%s\t%s\t%d\t%s\t%f\n",chrArr[i],locArr[i],geneArr[i],chrArr[j],locArr[j],geneArr[j],chrArr[k],locArr[k],geneArr[k],x);
 	++total;
 	if (total==1000000)
 	  return 0;
