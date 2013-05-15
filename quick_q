@@ -20,6 +20,7 @@ OPTIONS can be:
   -m  mem      Memory (default 1gb)
   -t  threads  Threads per device (default 1)
   -d  devices  Devices (default 1)
+  -T  walltime Max run time [[HH:]MM:]SS (default 168:00:00)
   -n  name     Name (default quick_q)
   -c  cmd      Command
   -q  queue    Queue name
@@ -43,6 +44,7 @@ MEM="1gb"
 NAME="quick_q"
 THREADS=1
 DEVICE=1
+WALLTIME="168:00:00"
 CMD=1
 QUEUE=
 PRIORITY=0
@@ -52,7 +54,7 @@ OTHER=
 MAIL=false
 
 # Check options passed in.
-while getopts "h m:t:n:c:d:q:p:o:e:W:u:z: M" OPTION
+while getopts "h m:t:n:c:d:T:q:p:o:e:W:u:z: M" OPTION
 do
     case $OPTION in
         h)
@@ -68,6 +70,9 @@ do
         d)
             DEVICE=$OPTARG
             ;;
+	T)
+	    WALLTIME=$OPTARG
+	    ;;
         n)
             NAME=$OPTARG
             ;;
@@ -108,7 +113,7 @@ QSUB=/usr/local/bin/qsub
 # for pbs_version = PBSPro_11.2.0.113417
 #QSUB_CMD="$QSUB -l select=$DEVICE:mem=$MEM:ncpus=$THREADS -m bae -N $NAME -M rl6sf@virginia.edu"
 # for version: 3.0.3
-QSUB_CMD="$QSUB -l nodes=$DEVICE:ppn=$THREADS,mem=$MEM -N $NAME -p $PRIORITY"
+QSUB_CMD="$QSUB -l nodes=$DEVICE:ppn=$THREADS,mem=$MEM,walltime=$WALLTIME -N $NAME -p $PRIORITY"
 
 if $MAIL
 then
