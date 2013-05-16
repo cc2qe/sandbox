@@ -93,20 +93,35 @@ int main (int argc, char **argv)
   
   FILE *f = fopen(file_name, "rt");
   FILE *s = fopen(samples_file_name, "rt");
-  
+
+  // make an array from the samples file
   char line[max_line];
+  char **sample = (char **) malloc(3 * sizeof(char*));
+  int j = 0;
+  while (fgets(line, max_line, s) != NULL) {
+    char *sample_name = strtok(line, sep);
+    char *sample_subpop = strtok(NULL, sep);
+    char *sample_superpop = strtok(NULL, sep);
+
+    sample[0] = strdup(sample_name);
+    sample[1] = strdup(sample_subpop);
+    sample[2] = strdup(sample_superpop);
+
+    ++j;
+  }
+  fclose(s);
+
+  printf("Done\n");
   
+  // array of arrays containing genotype info for each sample
+  // at each locus
   char *chrArr[num_loci];
   int posArr[num_loci];
   char *geneArr[num_loci];
-
-
-  // array of arrays containing genotype info for each sample
-  // at each locus
   int *M[num_loci];
   
   // chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
-  int j = 0;
+  j = 0;
   while (fgets(line, max_line, f) != NULL) {
     char *chr = strtok(line, sep);
     int pos = atoi(strtok(NULL, sep));
@@ -122,43 +137,30 @@ int main (int argc, char **argv)
     posArr[j] = pos;
     geneArr[j] = strdup(gene);
 
-    int *loci = (int *) malloc(num_samples * sizeof(int));
+    int *locus_gts = (int *) malloc(num_samples * sizeof(int));
     
     int i = 0;
 
     char *tok = strtok(NULL,sep);
     while ((tok != NULL) && (i < num_samples)) {
-      loci[i] = atoi(tok);
+      locus_gts[i] = atoi(tok);
       tok = strtok(NULL,sep);
       ++i;
     }
     
-    M[j] = loci;
+    M[j] = locus_gts;
     ++j;
   }
   fclose(f);
+  printf("Done2\n");
 
-  // make an array from the samples file
-  char **sample = (char **) malloc(3 * sizeof(char*));
-  j = 0;
-  while (fgets(line, max_line, f) != NULL) {
-    char *sample_name = strtok(line, sep);
-    char *sample_subpop = strtok(NULL, sep);
-    char *sample_superpop = strtok(NULL, sep);
-
-    sample[0] = strdup(sample_name);
-    sample[1] = strdup(sample_subpop);
-    sample[2] = strdup(sample_superpop);
-
-    ++j;
-  }
-  fclose(s);
-  
   int i,k,l;
   double rates_1[3], rates_2[3], rates_3[3];
   double expected[27], observed[27], chi[27];
   double chi_sum;
   
+  printf("hi3\t%d\n",M[0][0]);
+
   double *rates[num_loci];
   for (i = 0; i < num_loci; ++i) {
     double *rate = (double *) malloc(3 * sizeof(double));
@@ -166,6 +168,8 @@ int main (int argc, char **argv)
     rates[i] = rate;
   }
   
+  printf("hi2\n");
+
   for (i = 0; i < num_loci; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       for (k = j + 1; k < num_loci; ++k) {
@@ -176,7 +180,7 @@ int main (int argc, char **argv)
 	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(posArr[j] - posArr[k]) < min_distance) {
 	  continue;
 	}	
-	
+	printf("hi\n");
 	get_expected(rates[i],
 		     rates[j],
 		     rates[k],
