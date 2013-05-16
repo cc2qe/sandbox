@@ -88,7 +88,7 @@ int main (int argc, char **argv)
   int num_loci = atoi(argv[4]);
   int min_distance = atoi(argv[5]);
   double min_chi_sum = atoi(argv[6]);
-  int max_line = 5000;
+  int max_line = 5000; // the maximum length of a line to read in
   char *sep = "\t";
   
   FILE *f = fopen(file_name, "rt");
@@ -111,8 +111,6 @@ int main (int argc, char **argv)
   }
   fclose(s);
 
-  printf("Done\n");
-  
   // array of arrays containing genotype info for each sample
   // at each locus
   char *chrArr[num_loci];
@@ -140,7 +138,6 @@ int main (int argc, char **argv)
     int *locus_gts = (int *) malloc(num_samples * sizeof(int));
     
     int i = 0;
-
     char *tok = strtok(NULL,sep);
     while ((tok != NULL) && (i < num_samples)) {
       locus_gts[i] = atoi(tok);
@@ -152,15 +149,12 @@ int main (int argc, char **argv)
     ++j;
   }
   fclose(f);
-  printf("Done2\n");
 
   int i,k,l;
   double rates_1[3], rates_2[3], rates_3[3];
   double expected[27], observed[27], chi[27];
   double chi_sum;
   
-  printf("hi3\t%d\n",M[0][0]);
-
   double *rates[num_loci];
   for (i = 0; i < num_loci; ++i) {
     double *rate = (double *) malloc(3 * sizeof(double));
@@ -168,8 +162,6 @@ int main (int argc, char **argv)
     rates[i] = rate;
   }
   
-  printf("hi2\n");
-
   for (i = 0; i < num_loci; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       for (k = j + 1; k < num_loci; ++k) {
@@ -180,7 +172,7 @@ int main (int argc, char **argv)
 	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(posArr[j] - posArr[k]) < min_distance) {
 	  continue;
 	}	
-	printf("hi\n");
+
 	get_expected(rates[i],
 		     rates[j],
 		     rates[k],
