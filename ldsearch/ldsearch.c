@@ -77,8 +77,8 @@ void get_rates(int *loci,
  
 int main (int argc, char **argv)
 {
-  if (argc != 6) {
-    printf("usage %s: <genotypes file> <samples file> <num samples> <num loci> <min distance>\n", argv[0]);
+  if (argc != 7) {
+    printf("usage %s: <genotypes file> <samples file> <num samples> <num loci> <min distance> <min chi sum >\n", argv[0]);
     return 1;
   }
   
@@ -87,15 +87,17 @@ int main (int argc, char **argv)
   int num_samples = atoi(argv[3]);
   int num_loci = atoi(argv[4]);
   int min_distance = atoi(argv[5]);
+  double min_chi_sum = atoi(argv[6]);
   int max_line = 5000;
   char *sep = "\t";
   
   FILE *f = fopen(file_name, "rt");
+  FILE *s = fopen(samples_file_name, "rt");
   
   char line[max_line];
   
   char *chrArr[num_loci];
-  int locArr[num_loci];
+  int posArr[num_loci];
   char *geneArr[num_loci];
 
 
@@ -107,7 +109,7 @@ int main (int argc, char **argv)
   int j = 0;
   while (fgets(line, max_line, f) != NULL) {
     char *chr = strtok(line, sep);
-    int loc = atoi(strtok(NULL, sep));
+    int pos = atoi(strtok(NULL, sep));
     char *gene = strtok(NULL, sep);
     
     char *rate_1 = strtok(NULL, sep);
@@ -117,7 +119,7 @@ int main (int argc, char **argv)
     char *rate_5 = strtok(NULL, sep);
 
     chrArr[j] = strdup(chr);
-    locArr[j] = loc;
+    posArr[j] = pos;
     geneArr[j] = strdup(gene);
 
     int *loci = (int *) malloc(num_samples * sizeof(int));
@@ -135,11 +137,26 @@ int main (int argc, char **argv)
     ++j;
   }
   fclose(f);
+
+  // make an array from the samples file
+  char **sample = (char **) malloc(3 * sizeof(char*));
+  j = 0;
+  while (fgets(line, max_line, f) != NULL) {
+    char *sample_name = strtok(line, sep);
+    char *sample_subpop = strtok(NULL, sep);
+    char *sample_superpop = strtok(NULL, sep);
+
+    sample[0] = strdup(sample_name);
+    sample[1] = strdup(sample_subpop);
+    sample[2] = strdup(sample_superpop);
+
+    ++j;
+  }
+  fclose(s);
   
   int i,k,l;
   double rates_1[3], rates_2[3], rates_3[3];
-  double expected[27], observed[27];
-  double chi;
+  double expected[27], observed[27], chi[27];
   double chi_sum;
   
   double *rates[num_loci];
@@ -154,9 +171,9 @@ int main (int argc, char **argv)
       for (k = j + 1; k < num_loci; ++k) {
 	// only calc chi-square if loci are each separated by
 	// minimum distance
-	if (strcmp(chrArr[i],chrArr[j]) == 0 && abs(locArr[i] - locArr[j]) < min_distance ||
-	    strcmp(chrArr[i],chrArr[k]) == 0 && abs(locArr[i] - locArr[k]) < min_distance ||
-	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(locArr[j] - locArr[k]) < min_distance) {
+	if (strcmp(chrArr[i],chrArr[j]) == 0 && abs(posArr[i] - posArr[j]) < min_distance ||
+	    strcmp(chrArr[i],chrArr[k]) == 0 && abs(posArr[i] - posArr[k]) < min_distance ||
+	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(posArr[j] - posArr[k]) < min_distance) {
 	  continue;
 	}	
 	
@@ -172,20 +189,23 @@ int main (int argc, char **argv)
 		     num_samples,
 		     observed);
 
+	// calculate chi values for each cell and the chi_sum value for the trio
 	chi_sum = 0;
 	for (l = 0; l < 27; ++l) {
-	  chi = get_X(observed[l],expected[l]);
-	  chi_sum += chi;
+	  chi[l] = get_X(observed[l],expected[l]);
+	  chi_sum += chi[l];
 	}
 
-	//	for (l = 0; l < 27; ++l) {
-	  printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%.0f|%.1f|%.1f\t%f\n",
-		 chrArr[i],locArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
-		 chrArr[j],locArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
-		 chrArr[k],locArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
-		 observed[l],expected[l],observed[0]-expected[l],
-		 chi_sum);
-	  //	}
+	if (chi_sum >= min_chi_sum) {
+	  for (l = 0; l < 27; ++l) {
+	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%.0f|%.1f|%.1f\t%f\t%f\n",
+	  	   chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
+		   chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
+		   chrArr[k],posArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
+		   observed[l],expected[l],observed[l]-expected[l],
+		   chi[l],chi_sum);
+	  }
+	}
       }
     }
   }
