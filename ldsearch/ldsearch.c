@@ -2,20 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-double get_X(double *observed,
-             double *expected)
+double get_X(double observed,
+             double expected)
 {
-  int i;
-  double sum = 0;
   double numer;
-  for (i = 0; i < 27; ++i) {
-    if (expected[i] != 0) {
-      numer = (observed[i] - expected[i]);
-      sum += (numer*numer)/expected[i];
-    }
+  if (expected != 0) {
+    numer = (observed - expected);
+    return (numer*numer)/expected;
   }
-  return sum;
+  else return 0;
 }
+
 void get_expected(double *rates_1,
                   double *rates_2,
                   double *rates_3,
@@ -139,10 +136,11 @@ int main (int argc, char **argv)
   }
   fclose(f);
   
-  int i,k;
+  int i,k,l;
   double rates_1[3], rates_2[3], rates_3[3];
   double expected[27], observed[27];
-  double x;
+  double chi;
+  double chi_sum;
   
   double *rates[num_loci];
   for (i = 0; i < num_loci; ++i) {
@@ -173,17 +171,20 @@ int main (int argc, char **argv)
 		     M[k],
 		     num_samples,
 		     observed);
-	
-	x = get_X(observed,expected);
 
-	int l = 0;
+	chi_sum = 0;
+	for (l = 0; l < 27; ++l) {
+	  chi = get_X(observed[l],expected[l]);
+	  chi_sum += chi;
+	}
+
 	//	for (l = 0; l < 27; ++l) {
 	  printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%.0f|%.1f|%.1f\t%f\n",
 		 chrArr[i],locArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
 		 chrArr[j],locArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
 		 chrArr[k],locArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
 		 observed[l],expected[l],observed[0]-expected[l],
-		 x);
+		 chi_sum);
 	  //	}
       }
     }
