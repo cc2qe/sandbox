@@ -111,7 +111,7 @@ done" &&
 # echo $SORT_CMD
 #SORT_CMD="echo SORT_CMD"
 
-SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"` &&
+SORT_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"` &&
 
 
 # ---------------------
