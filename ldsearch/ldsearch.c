@@ -99,7 +99,7 @@ int usage()
 	  "  -s, --num_samples      number of samples in file\n"
 	  "  -l, --num_loci         number of loci in file\n"
 	  "  -d, --min_distance     minimum distance between loci\n"
-
+	  "  -x, --min_chi_sum      minimum chi-squared sum to print\n"
 	  "\n"
 	  );
   return 1;
@@ -118,7 +118,7 @@ int main (int argc, char **argv)
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "hd:s:l:m:")) != -1) {
+  while ((c = getopt(argc, argv, "hd:s:l:x:")) != -1) {
     switch (c) {
     case 'h':
       return usage();
@@ -131,7 +131,7 @@ int main (int argc, char **argv)
     case 'l':
       num_loci = atoi(optarg);
       break;
-    case 'm':
+    case 'x':
       min_chi_sum = atoi(optarg);
       break;
     case '?':
@@ -151,12 +151,10 @@ int main (int argc, char **argv)
   samples_file_name = argv[argc-1];
   file_name = argv[argc-2];
   
-  //  if (argc != 7) {
-  //  printf("usage %s: <genotypes file> <samples file> <num samples> <num loci> <min distance> <min chi sum >\n", argv[0]);
-  //return 1;
-  //}
+  if (argc < 2) {
+    return usage();
+  }
   
-
   int max_line = 5000; // the maximum length of a line to read in
   char *sep = "\t";
   
