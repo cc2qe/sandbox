@@ -80,15 +80,16 @@ void get_rates(int *loci,
  
 int main (int argc, char **argv)
 {
-  if (argc != 5) {
-    printf("usage %s: <file> <num samples> <num loci> <min distance>\n", argv[0]);
+  if (argc != 6) {
+    printf("usage %s: <genotypes file> <samples file> <num samples> <num loci> <min distance>\n", argv[0]);
     return 1;
   }
   
   char *file_name = argv[1];
-  int num_samples = atoi(argv[2]);
-  int num_loci = atoi(argv[3]);
-  int min_distance = atoi(argv[4]);
+  char *samples_file_name = argv[2];
+  int num_samples = atoi(argv[3]);
+  int num_loci = atoi(argv[4]);
+  int min_distance = atoi(argv[5]);
   int max_line = 5000;
   char *sep = "\t";
   
@@ -142,7 +143,6 @@ int main (int argc, char **argv)
   double rates_1[3], rates_2[3], rates_3[3];
   double expected[27], observed[27];
   double x;
-  int total = 0;
   
   double *rates[num_loci];
   for (i = 0; i < num_loci; ++i) {
@@ -156,10 +156,11 @@ int main (int argc, char **argv)
       for (k = j + 1; k < num_loci; ++k) {
 	// only calc chi-square if loci are each separated by
 	// minimum distance
-	if (strcmp(chrArr[i],chrArr[j]) == 0 && locArr[j] - locArr[i] < min_distance) {
-	  printf("equalstrings");
-
-	}
+	if (strcmp(chrArr[i],chrArr[j]) == 0 && abs(locArr[i] - locArr[j]) < min_distance ||
+	    strcmp(chrArr[i],chrArr[k]) == 0 && abs(locArr[i] - locArr[k]) < min_distance ||
+	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(locArr[j] - locArr[k]) < min_distance) {
+	  continue;
+	}	
 	
 	get_expected(rates[i],
 		     rates[j],
@@ -174,10 +175,16 @@ int main (int argc, char **argv)
 		     observed);
 	
 	x = get_X(observed,expected);
-	printf("%s\t%d\t%s\t%s\t%d\t%s\t%s\t%d\t%s\t%f\n",chrArr[i],locArr[i],geneArr[i],chrArr[j],locArr[j],geneArr[j],chrArr[k],locArr[k],geneArr[k],x);
-	++total;
-	if (total==1000000)
-	  return 0;
+
+	int l = 0;
+	//	for (l = 0; l < 27; ++l) {
+	  printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%.0f|%.1f|%.1f\t%f\n",
+		 chrArr[i],locArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
+		 chrArr[j],locArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
+		 chrArr[k],locArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
+		 observed[l],expected[l],observed[0]-expected[l],
+		 x);
+	  //	}
       }
     }
   }
