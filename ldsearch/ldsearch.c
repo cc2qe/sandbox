@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 double get_X(double observed,
              double expected)
@@ -74,20 +75,86 @@ void get_rates(int *loci,
   rates[1] = ((double)num_het) / ((double)total);
   rates[2] = ((double)num_hom_alt) / ((double)total);
 }
- 
+
+void parseArgs ()
+{
+  return;
+}
+
+int usage()
+{
+  fprintf(stderr,
+	  "usage: ldsearch [options] <file> <samples>\n\n"
+	  "authors: Ryan Layer and Colby Chiang\n"
+	  "description: finds loci in linkage disequilibrium based on\n"
+	  "  genotype frequencies in a set of individuals\n"
+	  "\n"
+	  "positional arguments:\n"
+	  "  file                   tab-delimited input file of genotypes\n"
+	  "  samples                tab-delimited file of sample names, superpopulations,\n"
+	  "                           and subpopulations\n"
+	  "\n"
+	  "optional arguments:\n"
+	  "  -h, --help             show this help and exit\n"
+	  "  -s, --num_samples      number of samples in file\n"
+	  "  -l, --num_loci         number of loci in file\n"
+	  "  -d, --min_distance     minimum distance between loci\n"
+	  "  -x, --min_chi_sum      minimum chi-squared sum to print\n"
+	  "\n"
+	  );
+  return 1;
+}
+
 int main (int argc, char **argv)
 {
-  if (argc != 7) {
-    printf("usage %s: <genotypes file> <samples file> <num samples> <num loci> <min distance> <min chi sum >\n", argv[0]);
-    return 1;
+  int min_distance = 0;
+  int num_samples;
+  int num_loci;
+  double min_chi_sum = 0;
+  char *file_name;
+  char *samples_file_name;
+
+  int i;
+  int c;
+  opterr = 0;
+
+  while ((c = getopt(argc, argv, "hd:s:l:x:")) != -1) {
+    switch (c) {
+    case 'h':
+      return usage();
+    case 'd':
+      min_distance = atoi(optarg);
+      break;
+    case 's':
+      num_samples = atoi(optarg);
+      break;
+    case 'l':
+      num_loci = atoi(optarg);
+      break;
+    case 'x':
+      min_chi_sum = atoi(optarg);
+      break;
+    case '?':
+      if (optopt == 'c')
+	fprintf(stderr, "Option -%c requires an argument\n", optopt);
+      else if (isprint(optopt))
+	fprintf(stderr, "Unknown option '-%c'\n", optopt);
+      else
+	fprintf(stderr, "Unknown option character '\\x%x'\n", optopt);
+      return 1;
+    default:
+      abort();
+    }
+  }
+
+  // parse the positional arguments
+  samples_file_name = argv[argc-1];
+  file_name = argv[argc-2];
+  
+  if (argc < 2) {
+    return usage();
   }
   
-  char *file_name = argv[1];
-  char *samples_file_name = argv[2];
-  int num_samples = atoi(argv[3]);
-  int num_loci = atoi(argv[4]);
-  int min_distance = atoi(argv[5]);
-  double min_chi_sum = atoi(argv[6]);
   int max_line = 5000; // the maximum length of a line to read in
   char *sep = "\t";
   
@@ -103,6 +170,8 @@ int main (int argc, char **argv)
     char *sample_subpop = strtok(NULL, sep);
     char *sample_superpop = strtok(NULL, sep);
 
+    // copy the string into an array that will be retained
+    // through the end of the run
     sample[0] = strdup(sample_name);
     sample[1] = strdup(sample_subpop);
     sample[2] = strdup(sample_superpop);
@@ -137,7 +206,7 @@ int main (int argc, char **argv)
 
     int *locus_gts = (int *) malloc(num_samples * sizeof(int));
     
-    int i = 0;
+    i = 0;
     char *tok = strtok(NULL,sep);
     while ((tok != NULL) && (i < num_samples)) {
       locus_gts[i] = atoi(tok);
@@ -150,7 +219,7 @@ int main (int argc, char **argv)
   }
   fclose(f);
 
-  int i,k,l;
+  int k,l;
   double rates_1[3], rates_2[3], rates_3[3];
   double expected[27], observed[27], chi[27];
   double chi_sum;
