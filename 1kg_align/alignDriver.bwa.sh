@@ -160,6 +160,7 @@ do
         -R $REF \
         -knownSites $DBSNP \
         -l INFO \
+        -rf BadCigar \
         -cov ReadGroupCovariate \
         -cov QualityScoreCovariate \
         -cov CycleCovariate \
