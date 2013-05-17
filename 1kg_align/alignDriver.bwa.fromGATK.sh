@@ -49,10 +49,7 @@ done" &&
 
 #MOVE_FILES_CMD="echo MOVE_FILES_CMD"
 
-
-
-MOVE_FILES_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE` &&
-
+#MOVE_FILES_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE` &&
 
 for SAMPLE in `cat $SAMPLELIST`
 do
@@ -89,8 +86,7 @@ done" &&
 
 #echo $ALIGN_CMD
 
-ALIGN_Q=`$QUICK_Q -d $NODE -t 2 -m 5000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q` &&
-
+#ALIGN_Q=`$QUICK_Q -d $NODE -t 2 -m 5000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q` &&
 
 # ---------------------
 # STEP 3: Sort and fix flags on the bam file
@@ -111,8 +107,7 @@ done" &&
 # echo $SORT_CMD
 #SORT_CMD="echo SORT_CMD"
 
-SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"` &&
-
+#SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"` &&
 
 # ---------------------
 # STEP 5: GATK reprocessing
@@ -185,7 +180,8 @@ done" &&
 
 #GATK_CMD="echo GATK_CMD"
 
-GATK_Q=`$QUICK_Q -m 7800mb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -W depend=afterok:$SORT_Q` &&
+#GATK_Q=`$QUICK_Q -m 7800mb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -W depend=afterok:$SORT_Q` &&
+GATK_Q=`$QUICK_Q -m 7800mb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE` &&
 
 
 
