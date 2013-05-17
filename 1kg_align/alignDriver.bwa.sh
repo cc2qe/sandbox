@@ -174,14 +174,17 @@ do
         -BQSR $SAMPLE.\$READGROUP.recal_data.grp \
         --disable_bam_indexing \
         -l INFO \
-        -o $SAMPLE.\$READGROUP.bwa.recal.bam &&
+        -o $SAMPLE.\$READGROUP.bwa.recal.bam
 
-    echo 'cleaning up...' &&
+done && \
+
+echo 'cleaning up...' &&
+for READGROUP in \`cat rglist\`
+do
     rm $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
         $SAMPLE.\$READGROUP.bwa.realign.fixed.bai \
         $SAMPLE.\$READGROUP.bwa.fixed.bam \
         $SAMPLE.\$READGROUP.bwa.fixed.bam.bai
-
 done" &&
 
 #GATK_CMD="echo GATK_CMD"
