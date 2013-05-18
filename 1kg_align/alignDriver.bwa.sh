@@ -201,8 +201,11 @@ for READGROUP in \`cat rglist\`
 do
     time $SAMTOOLS calmd -Erb $SAMPLE.\$READGROUP.bwa.recal.bam $REF > $SAMPLE.\$READGROUP.bwa.recal.bq.bam &&
     time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.recal.bq.bam &&
+done && \
 
-    echo 'cleaning up...' &&
+echo 'cleaning up...' &&
+for READGROUP in \`cat rglist\`
+do
     rm $SAMPLE.\$READGROUP.bwa.recal.bam
 done" &&
 
