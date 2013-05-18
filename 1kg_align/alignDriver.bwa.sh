@@ -105,7 +105,7 @@ do
 	$SAMTOOLS fillmd -b - $REF > $SAMPLE.\$READGROUP.bwa.fixed.bam &&
     
     time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.fixed.bam &&
-    rm $SAMPLE.\$READGROUP.bwa.bam
+
 done" &&
 
 # echo $SORT_CMD
