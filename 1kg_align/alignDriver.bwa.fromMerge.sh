@@ -254,13 +254,11 @@ then
     echo "still have $checkRG"
 fi
 
-bamErr=`samtools view -H $SAMPLE.bwa.merged.bam  2>&1 > /dev/null`
-
-exit 0
+continue
 
 
 
-#MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE` &&
+MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE` &&
 
 
 # -----------------------
@@ -270,7 +268,7 @@ MKDUP2_CMD="
 cd $WORKDIR &&
 if [ \`cat rglist | wc -l\` -gt 1 ] ;
 then
-    time java -Xmx8g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.bwa.merged.bam OUTPUT=$SAMPLE.bwa.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
+    time java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.bwa.merged.bam OUTPUT=$SAMPLE.bwa.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
 
     echo 'clean up files...' &&
     rm $SAMPLE.bwa.merged.bam $SAMPLE.bwa.merged.bai
@@ -279,7 +277,7 @@ fi
 
 #MKDUP2_CMD="echo mkdup2 command"
 
-#MKDUP2_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q` &&
+MKDUP2_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q` &&
 
 
 # -----------------------
@@ -294,7 +292,7 @@ time java -Xmx16g -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
 
 #REDUCE_CMD="echo reduce command"
 
-#REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q` &&
+REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q` &&
 
 
 # ---------------------
@@ -314,7 +312,7 @@ echo $SAMPLE >> $SAMPLEDIR/../completed.txt" &&
 
 #RESTORE_CMD="echo RESTORE_CMD"
 
-#RESTORE_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
+RESTORE_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
 
 
 done
