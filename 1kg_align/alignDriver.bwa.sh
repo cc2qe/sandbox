@@ -104,8 +104,14 @@ do
 	$SAMTOOLS fixmate /dev/stdin /dev/stdout | $SAMTOOLS sort -o - samtools_csort_tmp | \
 	$SAMTOOLS fillmd -b - $REF > $SAMPLE.\$READGROUP.bwa.fixed.bam &&
     
-    time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.fixed.bam &&
+    time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.fixed.bam
 
+done &&
+
+echo 'clean up the raw bam files...' &&
+for READGROUP in \`cat rglist\`
+do
+    rm $SAMPLE.\$READGROUP.bwa.raw.bam
 done" &&
 
 # echo $SORT_CMD
