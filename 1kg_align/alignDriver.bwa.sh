@@ -78,7 +78,7 @@ do
     time $BWA aln -t 2 -q 15 -f $SAMPLE.\${READGROUP}_1.sai $REF \$FASTQ1 &&
     time $BWA aln -t 2 -q 15 -f $SAMPLE.\${READGROUP}_2.sai $REF \$FASTQ2 &&
 
-    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.bam &&
+    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.raw.bam &&
 
     echo 'cleaning up...' &&
     rm \$FASTQ1 \$FASTQ2 $SAMPLE.\${READGROUP}_*.sai
@@ -99,7 +99,7 @@ ALIGN_Q=`$QUICK_Q -d $NODE -t 2 -m 5000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_C
 SORT_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
-    time $SAMTOOLS view -bu $SAMPLE.\$READGROUP.bwa.bam | \
+    time $SAMTOOLS view -bu $SAMPLE.\$READGROUP.bwa.raw.bam | \
         $SAMTOOLS sort -n -o - samtools_nsort_tmp | \
 	$SAMTOOLS fixmate /dev/stdin /dev/stdout | $SAMTOOLS sort -o - samtools_csort_tmp | \
 	$SAMTOOLS fillmd -b - $REF > $SAMPLE.\$READGROUP.bwa.fixed.bam &&
