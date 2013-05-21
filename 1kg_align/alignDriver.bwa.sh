@@ -1,4 +1,4 @@
-0;95;c#!/bin/bash
+#!/bin/bash
 
 if [ $# -lt 3 ]
 then
@@ -292,7 +292,7 @@ echo $SAMPLE >> $SAMPLEDIR/../completed.txt" &&
 
 #REDUCE_CMD="echo reduce command"
 
-REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q` &&
+REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
 
 done
 
