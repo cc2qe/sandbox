@@ -270,24 +270,15 @@ MKDUP2_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2
 
 
 # -----------------------
-# STEP 9: Reduce reads
+# STEP 9: Reduce reads and move back to hall13
 
 REDUCE_CMD="cd $WORKDIR &&
 time java -Xmx16g -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
     -T ReduceReads \
     -R $REF \
     -I $SAMPLE.bwa.bam \
-    -o $SAMPLE.bwa.reduced.bam" &&
+    -o $SAMPLE.bwa.reduced.bam &&
 
-#REDUCE_CMD="echo reduce command"
-
-REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q` &&
-
-
-# ---------------------
-# STEP 10: Move back to hall13 and cleanup.
-
-RESTORE_CMD="cd $WORKDIR &&
 rsync -rv $SAMPLE.bwa.bam $SAMPLE.bwa.bai \
     $SAMPLE.bwa.reduced.bam $SAMPLE.bwa.reduced.bai \
     *.recal_data.grp \
@@ -299,10 +290,9 @@ rm -r $WORKDIR &&
 
 echo $SAMPLE >> $SAMPLEDIR/../completed.txt" &&
 
-#RESTORE_CMD="echo RESTORE_CMD"
+#REDUCE_CMD="echo reduce command"
 
-RESTORE_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
-
+REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q` &&
 
 done
 
