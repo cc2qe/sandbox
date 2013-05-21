@@ -273,7 +273,7 @@ MKDUP2_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2
 # STEP 9: Reduce reads and move back to hall13
 
 REDUCE_CMD="cd $WORKDIR &&
-time java -Xmx16g -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
+time java -Xmx9900m -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
     -T ReduceReads \
     -R $REF \
     -I $SAMPLE.bwa.bam \
@@ -292,7 +292,7 @@ echo $SAMPLE >> $SAMPLEDIR/../completed.txt" &&
 
 #REDUCE_CMD="echo reduce command"
 
-REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
+REDUCE_Q=`$QUICK_Q -m 9900mb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
 
 done
 
