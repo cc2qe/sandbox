@@ -206,7 +206,7 @@ CALMD_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
     time $SAMTOOLS calmd -Erb $SAMPLE.\$READGROUP.bwa.recal.bam $REF > $SAMPLE.\$READGROUP.bwa.recal.bq.bam &&
-    time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.recal.bq.bam &&
+    time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.recal.bq.bam
 done && \
 
 echo 'cleaning up...' &&
