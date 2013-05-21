@@ -220,6 +220,12 @@ done" &&
 # only merge if there are multiple readgroups
 MERGE_CMD="
 cd $WORKDIR &&
+
+checkRG=\`head -n 1 rglist\` &&
+if [ -e ${SAMPLE}.\${checkRG}.bwa.recal.bq.bam ] ;
+then
+    echo 'still have it' &&
+
 if [ \`cat rglist | wc -l\` -gt 1 ] ;
 then
     INPUT_STRING='' &&
@@ -241,22 +247,11 @@ else
         mv $SAMPLE.\$READGROUP.bwa.recal.bq.bam.bai $SAMPLE.bwa.bai
     done
 fi
+
+fi
 " &&
 
 #MERGE_CMD="echo merge_cmd command"
-
-# SOME CRAZY IF STATEMENT TO CHECK IF ITS ACTUALLY A FAILED RUN
-cd $WORKDIR &&
-checkRG=`head -n 1 rglist`
-checkBAM
-if [ -e ${SAMPLE}.${checkRG}.bwa.recal.bq.bam ]
-then
-    echo "still have $checkRG"
-fi
-
-continue
-
-
 
 MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE` &&
 
@@ -281,24 +276,15 @@ MKDUP2_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2
 
 
 # -----------------------
-# STEP 9: Reduce reads
+# STEP 9: Reduce reads and transfer back to hall13
 
 REDUCE_CMD="cd $WORKDIR &&
 time java -Xmx16g -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
     -T ReduceReads \
     -R $REF \
     -I $SAMPLE.bwa.bam \
-    -o $SAMPLE.bwa.reduced.bam" &&
+    -o $SAMPLE.bwa.reduced.bam &&
 
-#REDUCE_CMD="echo reduce command"
-
-REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q` &&
-
-
-# ---------------------
-# STEP 10: Move back to hall13 and cleanup.
-
-RESTORE_CMD="cd $WORKDIR &&
 rsync -rv $SAMPLE.bwa.bam $SAMPLE.bwa.bai \
     $SAMPLE.bwa.reduced.bam $SAMPLE.bwa.reduced.bai \
     *.recal_data.grp \
@@ -310,10 +296,11 @@ rm -r $WORKDIR &&
 
 echo $SAMPLE >> $SAMPLEDIR/../completed.txt" &&
 
-#RESTORE_CMD="echo RESTORE_CMD"
 
-RESTORE_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n restore_${SAMPLE}_${NODE} -c " $RESTORE_CMD " -q $QUEUE -W depend=afterok:$REDUCE_Q`
 
+#REDUCE_CMD="echo reduce command"
+
+REDUCE_Q=`$QUICK_Q -m 16gb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
 
 done
 

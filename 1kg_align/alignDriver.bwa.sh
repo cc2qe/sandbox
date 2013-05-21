@@ -1,4 +1,4 @@
-#!/bin/bash
+0;95;c#!/bin/bash
 
 if [ $# -lt 3 ]
 then
@@ -176,7 +176,7 @@ do
         -l INFO \
         -o $SAMPLE.\$READGROUP.bwa.recal.bam
 
-done && \
+done &&
 
 echo 'cleaning up...' &&
 for READGROUP in \`cat rglist\`
