@@ -28,7 +28,9 @@ OPTIONS can be:
   -o  output   Path for stdout of job (default jobname.ojobid)
   -e  error    Path for stderr of job (default jobname.ejobid)
   -W  attr     Additional attributes
-  -M  mail     Mail results
+  -M  mail     Mail results (Upon end or abort)
+  -u  email address
+               Email address to send results to
   -z  other    Other qsub parameters
 EOF
 }
@@ -52,6 +54,7 @@ OUTPUT=
 ERROR=
 OTHER=
 MAIL=false
+EMAIL=
 
 # Check options passed in.
 while getopts "h m:t:n:c:d:T:q:p:o:e:W:u:z: M" OPTION
@@ -94,6 +97,9 @@ do
 	M)
 	    MAIL=true
 	    ;;
+	u)
+	    EMAIL=$OPTARG
+	    ;;
 	W)
 	    ATTR=$OPTARG
 	    ;;
@@ -117,9 +123,14 @@ QSUB_CMD="$QSUB -l nodes=$DEVICE:ppn=$THREADS,mem=$MEM,walltime=$WALLTIME -N $NA
 
 if $MAIL
 then
-    QSUB_CMD+=" -m abe"
+    QSUB_CMD+=" -m ae"
 else
     QSUB_CMD+=" -m n"
+fi
+
+if [ ! -z "$EMAIL" ]
+then
+    QSUB_CMD+=" -M $EMAIL"
 fi
 
 if [ ! -z "$QUEUE" ]
