@@ -306,7 +306,7 @@ echo $SAMPLE >> $SAMPLEDIR/../completed.txt" &&
 
 #REDUCE_CMD="echo reduce command"
 
-REDUCE_Q=`$QUICK_Q -m 9900mb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -W depend=afterok:$MKDUP2_Q`
+REDUCE_Q=`$QUICK_Q -m 9900mb -d $NODE -t 1 -n reduce_${SAMPLE}_${NODE} -c " $REDUCE_CMD " -q $QUEUE -M -u colby.chiang@gmail.com -W depend=afterok:$MKDUP2_Q`
 
 done
 
