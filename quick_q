@@ -31,7 +31,8 @@ OPTIONS can be:
   -M  mail     Mail results (Upon end or abort)
   -u  email address
                Email address to send results to
-  -z  other    Other qsub parameters
+  -z  other    Other qsub parameters that are passed
+                 directly into qsub
 EOF
 }
 
