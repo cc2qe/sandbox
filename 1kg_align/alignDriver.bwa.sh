@@ -78,9 +78,17 @@ do
     time $BWA aln -t 2 -q 15 -f $SAMPLE.\${READGROUP}_1.sai $REF \$FASTQ1 &&
     time $BWA aln -t 2 -q 15 -f $SAMPLE.\${READGROUP}_2.sai $REF \$FASTQ2 &&
 
-    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.raw.bam &&
+    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.raw.bam
 
-    echo 'cleaning up...' &&
+done &&
+
+echo 'cleaning up...' &&
+for i in \$(seq 1 \`cat fqlist1 | wc -l\`)
+do
+    FASTQ1=\`sed -n \${i}p fqlist1\` &&
+    FASTQ2=\`sed -n \${i}p fqlist2\` &&
+    READGROUP=\`echo \$FASTQ1 | sed 's/_.*//g'\` &&
+
     rm \$FASTQ1 \$FASTQ2 $SAMPLE.\${READGROUP}_*.sai
 
 done" &&
