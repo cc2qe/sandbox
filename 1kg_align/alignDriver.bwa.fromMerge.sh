@@ -234,7 +234,7 @@ then
         INPUT_STRING+=\" I=$SAMPLE.\$READGROUP.bwa.recal.bq.bam\"
     done &&
 
-    time java -Xmx4g -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.bwa.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT &&
+    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.bwa.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT &&
 
     for READGROUP in \`cat rglist\`
     do
@@ -253,7 +253,7 @@ fi
 
 #MERGE_CMD="echo merge_cmd command"
 
-MERGE_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE` &&
+MERGE_Q=`$QUICK_Q -m 7800mb -d $NODE -t 1 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE` &&
 
 
 # -----------------------
