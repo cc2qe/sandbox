@@ -261,7 +261,7 @@ fi
 
 #MERGE_CMD="echo merge_cmd command"
 
-MERGE_Q=`$QUICK_Q -m 5900mb -d $NODE -t 1 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q` &&
+MERGE_Q=`$QUICK_Q -m 5900mb -d $NODE -t 3 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q` &&
 
 
 # -----------------------
@@ -271,7 +271,7 @@ MKDUP2_CMD="
 cd $WORKDIR &&
 if [ \`cat rglist | wc -l\` -gt 1 ] ;
 then
-    time java -Xmx15900m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.bwa.merged.bam OUTPUT=$SAMPLE.bwa.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
+    time java -Xmx7900m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.bwa.merged.bam OUTPUT=$SAMPLE.bwa.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
 
     echo 'clean up files...' &&
     rm $SAMPLE.bwa.merged.bam $SAMPLE.bwa.merged.bai
@@ -280,7 +280,7 @@ fi
 
 #MKDUP2_CMD="echo mkdup2 command"
 
-MKDUP2_Q=`$QUICK_Q -m 15900mb -d $NODE -t 1 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q` &&
+MKDUP2_Q=`$QUICK_Q -m 7900mb -d $NODE -t 3 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q` &&
 
 
 # -----------------------
