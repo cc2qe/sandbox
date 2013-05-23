@@ -7,8 +7,8 @@ import re
 # --------------------------------------
 # define functions
 
-def organizeFastqs(fastqList):
-    rootDir = '/mnt/thor_pool1/user_data/cc2qe/projects/human_diversity/1kg/batch1'   
+def organizeFastqs(fastqList, destRoot):
+    # destRoot = '/mnt/thor_pool1/user_data/cc2qe/projects/human_diversity/1kg/batch1'   
     for line in fastqList:
         v = line.rstrip().split('\t')
 
@@ -23,7 +23,7 @@ def organizeFastqs(fastqList):
 
         strand = int( re.sub('.*_(.)\.filt\.fastq\.gz', '\\1', file) )
 
-        destDir = rootDir + '/' + sampleId
+        destDir = destRoot + '/' + sampleId
 
         print sampleId, runId, file, libraryId, strand
         RGstring = '@RG\\tID:%s\\tLB:%s\\tSM:%s\\tPI:%s\\tCN:%s\\tPL:%s\\tDS:%s' % (runId, libraryId, sampleId, pairInsert, center, platform, studyId)
@@ -31,15 +31,17 @@ def organizeFastqs(fastqList):
         # check if directory exists
         if not os.path.isdir(destDir):
             print 'mkdir ' + destDir
-            os.mkdir(rootDir + '/' + sampleId)
+            os.mkdir(destRoot + '/' + sampleId)
 
         # make readgroup sam flag
         readGroupFile = open(destDir + '/' + runId + '_readgroup.txt', 'w')
         readGroupFile.write(RGstring)
         readGroupFile.close()
         
-
-        #print 'moving %s to %s' % (file, destDir)
+        # verbose
+        print 'moving %s to %s' % (file, destDir)
+        
+        # the actual move command
         os.rename(file, destDir + '/' + file)
     return
 
@@ -48,15 +50,17 @@ def organizeFastqs(fastqList):
 
 def main():
     parser = argparse.ArgumentParser(description="Organize 1kg fastq files by sample")
-    parser.add_argument('-i', '--input', required=True, type=argparse.FileType('r'), help='fastq filelist')
+    parser.add_argument('-i', '--input', required=True, type=argparse.FileType('r'), help='fastq filelist (fqbind)')
+    parser.add_argument('-d', '--dest', required=True, type=str, help='destination directory')
     
     # parse the arguments
     args = parser.parse_args()
 
     # store into global values
     fastqList = args.input
+    destRoot = args.dest
     
-    organizeFastqs(fastqList)
+    organizeFastqs(fastqList, destRoot)
 
     fastqList.close()
 
