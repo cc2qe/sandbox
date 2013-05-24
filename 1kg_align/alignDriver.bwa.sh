@@ -54,7 +54,7 @@ do
     SAMPLEDIR=$BATCHDIR/\$SAMPLE &&
 
     mkdir -p \$WORKDIR &&
-    rsync -rv \$SAMPLEDIR/fqlist* \$SAMPLEDIR/rglist \$SAMPLEDIR/*_readgroup.txt \$SAMPLEDIR/*.fastq.gz \$WORKDIR
+    rsync -avPtL \$SAMPLEDIR/fqlist* \$SAMPLEDIR/rglist \$SAMPLEDIR/*_readgroup.txt \$SAMPLEDIR/*.fastq.gz \$WORKDIR
 done" &&
 
 #MOVE_FILES_CMD="echo MOVE_FILES_CMD"
@@ -303,7 +303,7 @@ time java -Xmx9900m -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
     -I $SAMPLE.bwa.bam \
     -o $SAMPLE.bwa.reduced.bam &&
 
-rsync -rv $SAMPLE.bwa.bam $SAMPLE.bwa.bai \
+rsync -avPtL $SAMPLE.bwa.bam $SAMPLE.bwa.bai \
     $SAMPLE.bwa.reduced.bam $SAMPLE.bwa.reduced.bai \
     *.recal_data.grp \
     *.intervals \
