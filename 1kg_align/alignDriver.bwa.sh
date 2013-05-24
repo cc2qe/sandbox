@@ -2,14 +2,24 @@
 
 if [ $# -lt 3 ]
 then
-    echo usage $0 [sampleList] [batchDirectory] [node]
+    echo usage $0 [sampleList] [batchDirectory] [node] [scratchDirectory] [outputRoot]
     exit 1
 fi
 
 # Directory and data names
 SAMPLELIST=$1
 BATCHDIR=$2
+# default this to batch1 for legacy, but allow cmd line arg
 ROOTDIR=/scratch/cc2qe/1kg/batch1
+if [ ! -z $4 ]
+then
+    ROOTDIR=$4
+fi
+OUTPUTROOT=$BATCHDIR
+if [ ! -z $5 ]
+then
+    OUTPUTROOT=$5
+fi
 
 # Annotations
 REF=/mnt/thor_pool1/user_data/cc2qe/refdata/genomes/b37/human_b37_hs37d5.fa
@@ -284,7 +294,7 @@ MKDUP2_Q=`$QUICK_Q -m 7900mb -d $NODE -t 3 -n mkdup2_${SAMPLE}_${NODE} -c " $MKD
 
 
 # -----------------------
-# STEP 9: Reduce reads and move back to hall13
+# STEP 9: Reduce reads and move back to source
 
 REDUCE_CMD="cd $WORKDIR &&
 time java -Xmx9900m -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
@@ -297,12 +307,12 @@ rsync -rv $SAMPLE.bwa.bam $SAMPLE.bwa.bai \
     $SAMPLE.bwa.reduced.bam $SAMPLE.bwa.reduced.bai \
     *.recal_data.grp \
     *.intervals \
-    $SAMPLEDIR &&
+    $OUTPUTROOT/$SAMPLE &&
 
 echo 'removing scratch directory...' &&
 rm -r $WORKDIR &&
 
-echo $SAMPLE >> $SAMPLEDIR/../completed.txt" &&
+echo $SAMPLE >> $OUTPUTROOT/$SAMPLE/../completed.txt" &&
 
 #REDUCE_CMD="echo reduce command"
 

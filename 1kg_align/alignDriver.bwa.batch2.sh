@@ -49,7 +49,10 @@ done" &&
 
 #MOVE_FILES_CMD="echo MOVE_FILES_CMD"
 
-#MOVE_FILES_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE` &&
+
+
+MOVE_FILES_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE` &&
+
 
 for SAMPLE in `cat $SAMPLELIST`
 do
@@ -75,9 +78,17 @@ do
     time $BWA aln -t 2 -q 15 -f $SAMPLE.\${READGROUP}_1.sai $REF \$FASTQ1 &&
     time $BWA aln -t 2 -q 15 -f $SAMPLE.\${READGROUP}_2.sai $REF \$FASTQ2 &&
 
-    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.bam &&
+    time $BWA sampe -r \$RGSTRING $REF $SAMPLE.\${READGROUP}_1.sai $SAMPLE.\${READGROUP}_2.sai \$FASTQ1 \$FASTQ2 | $SAMTOOLS view -Sb - > $SAMPLE.\$READGROUP.bwa.raw.bam
 
-    echo 'cleaning up...' &&
+done &&
+
+echo 'cleaning up...' &&
+for i in \$(seq 1 \`cat fqlist1 | wc -l\`)
+do
+    FASTQ1=\`sed -n \${i}p fqlist1\` &&
+    FASTQ2=\`sed -n \${i}p fqlist2\` &&
+    READGROUP=\`echo \$FASTQ1 | sed 's/_.*//g'\` &&
+
     rm \$FASTQ1 \$FASTQ2 $SAMPLE.\${READGROUP}_*.sai
 
 done" &&
@@ -86,7 +97,8 @@ done" &&
 
 #echo $ALIGN_CMD
 
-#ALIGN_Q=`$QUICK_Q -d $NODE -t 2 -m 5000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q` &&
+ALIGN_Q=`$QUICK_Q -d $NODE -t 2 -m 5000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q` &&
+
 
 # ---------------------
 # STEP 3: Sort and fix flags on the bam file
@@ -95,19 +107,26 @@ done" &&
 SORT_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
-    time $SAMTOOLS view -bu $SAMPLE.\$READGROUP.bwa.bam | \
+    time $SAMTOOLS view -bu $SAMPLE.\$READGROUP.bwa.raw.bam | \
         $SAMTOOLS sort -n -o - samtools_nsort_tmp | \
 	$SAMTOOLS fixmate /dev/stdin /dev/stdout | $SAMTOOLS sort -o - samtools_csort_tmp | \
 	$SAMTOOLS fillmd -b - $REF > $SAMPLE.\$READGROUP.bwa.fixed.bam &&
     
-    time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.fixed.bam &&
-    rm $SAMPLE.\$READGROUP.bwa.bam
+    time $SAMTOOLS index $SAMPLE.\$READGROUP.bwa.fixed.bam
+
+done &&
+
+echo 'clean up the raw bam files...' &&
+for READGROUP in \`cat rglist\`
+do
+    rm $SAMPLE.\$READGROUP.bwa.raw.bam
 done" &&
 
 # echo $SORT_CMD
 #SORT_CMD="echo SORT_CMD"
 
-#SORT_Q=`$QUICK_Q -m 8gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"` &&
+SORT_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"` &&
+
 
 # ---------------------
 # STEP 5: GATK reprocessing
@@ -171,7 +190,7 @@ do
         -l INFO \
         -o $SAMPLE.\$READGROUP.bwa.recal.bam
 
-done && \
+done &&
 
 echo 'cleaning up...' &&
 for READGROUP in \`cat rglist\`
@@ -184,8 +203,7 @@ done" &&
 
 #GATK_CMD="echo GATK_CMD"
 
-#GATK_Q=`$QUICK_Q -m 7800mb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -W depend=afterok:$SORT_Q` &&
-#GATK_Q=`$QUICK_Q -m 7800mb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE` &&
+GATK_Q=`$QUICK_Q -m 7800mb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -W depend=afterok:$SORT_Q` &&
 
 
 
@@ -205,11 +223,9 @@ do
     rm $SAMPLE.\$READGROUP.bwa.recal.bam
 done" &&
 
-
-
 #CALMD_CMD="echo calmd_cmd"
 
-#CALMD_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n calmd_${SAMPLE}_${NODE} -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q` &&
+CALMD_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n calmd_${SAMPLE}_${NODE} -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q` &&
 
 
 
@@ -220,12 +236,6 @@ done" &&
 # only merge if there are multiple readgroups
 MERGE_CMD="
 cd $WORKDIR &&
-
-checkRG=\`head -n 1 rglist\` &&
-if [ -e ${SAMPLE}.\${checkRG}.bwa.recal.bq.bam ] ;
-then
-    echo 'still have it' &&
-
 if [ \`cat rglist | wc -l\` -gt 1 ] ;
 then
     INPUT_STRING='' &&
@@ -247,13 +257,11 @@ else
         mv $SAMPLE.\$READGROUP.bwa.recal.bq.bam.bai $SAMPLE.bwa.bai
     done
 fi
-
-fi
 " &&
 
 #MERGE_CMD="echo merge_cmd command"
 
-MERGE_Q=`$QUICK_Q -m 5900mb -d $NODE -t 3 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE` &&
+MERGE_Q=`$QUICK_Q -m 5900mb -d $NODE -t 3 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q` &&
 
 
 # -----------------------
@@ -276,7 +284,7 @@ MKDUP2_Q=`$QUICK_Q -m 7900mb -d $NODE -t 3 -n mkdup2_${SAMPLE}_${NODE} -c " $MKD
 
 
 # -----------------------
-# STEP 9: Reduce reads and transfer back to hall13
+# STEP 9: Reduce reads and move back to hall13
 
 REDUCE_CMD="cd $WORKDIR &&
 time java -Xmx9900m -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
@@ -295,8 +303,6 @@ echo 'removing scratch directory...' &&
 rm -r $WORKDIR &&
 
 echo $SAMPLE >> $SAMPLEDIR/../completed.txt" &&
-
-
 
 #REDUCE_CMD="echo reduce command"
 
