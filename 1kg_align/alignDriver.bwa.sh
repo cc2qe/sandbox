@@ -61,7 +61,7 @@ done" &&
 
 
 
-MOVE_FILES_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -q $QUEUE` &&
+MOVE_FILES_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n move_${NODE} -c " $MOVE_FILES_CMD " -p 10 -q $QUEUE` &&
 
 
 for SAMPLE in `cat $SAMPLELIST`
