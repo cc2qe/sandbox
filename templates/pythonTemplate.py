@@ -19,8 +19,7 @@ description: Basic python script template")
     parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
     parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
     parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
-    parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='file to read. If \'-\' or absent then defaults \
-to stdin.')
+    parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='file to read. If \'-\' or absent then defaults to stdin.')
 
     # parse the arguments
     args = parser.parse_args()
@@ -32,6 +31,8 @@ to stdin.')
             exit(1)
         else:
             args.input = sys.stdin
+
+    # send back the user input
     return args
 
 # primary function
