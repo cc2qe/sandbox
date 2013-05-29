@@ -144,9 +144,7 @@ SORT_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD "
 GATK_CMD="cd $WORKDIR &&
 for READGROUP in \`cat rglist\`
 do
-    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ \
-         -XX:ParallelGCThreads=3 \
-         -jar $PICARD/MarkDuplicates.jar \
+    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar \
          INPUT=$SAMPLE.\$READGROUP.bwa.fixed.bam \
          OUTPUT=$SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
          ASSUME_SORTED=TRUE \
@@ -155,9 +153,7 @@ do
          MAX_FILE_HANDLES=1000 \
          CREATE_INDEX=true &&
 
-    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ \
-        -XX:ParallelGCThreads=3 \
-        -jar $GATK \
+    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp -jar $GATK \
         -T RealignerTargetCreator \
         -nt 3 \
         -R $REF \
@@ -166,26 +162,22 @@ do
         -known $INDELS1 \
         -known $INDELS2 &&
 
-    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ \
-        -XX:ParallelGCThreads=3 \
-        -jar $GATK \
-        -T IndelRealigner \
-        -R $REF \
-        -I $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
-        -o $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
-        -targetIntervals $SAMPLE.\$READGROUP.intervals \
-        -known $INDELS1 \
-        -known $INDELS2 \
-        -LOD 0.4 \
-        -model KNOWNS_ONLY &&
+    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
+         -T IndelRealigner \
+         -R $REF \
+         -I $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
+         -o $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
+         -targetIntervals $SAMPLE.\$READGROUP.intervals \
+         -known $INDELS1 \
+         -known $INDELS2 \
+         -LOD 0.4 \
+         -model KNOWNS_ONLY &&
 
     echo 'cleaning up fixed.mkdup.bam...' &&
     rm $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bam \
         $SAMPLE.\$READGROUP.bwa.fixed.mkdup.bai &&
 
-    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ \
-        -XX:ParallelGCThreads=3 \
-        -jar $GATK \
+    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
         -T BaseRecalibrator \
         -nct 3 \
         -I $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
@@ -199,9 +191,7 @@ do
         -cov ContextCovariate \
         -o $SAMPLE.\$READGROUP.recal_data.grp &&
 
-    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ \
-        -XX:ParallelGCThreads=3 \
-        -jar $GATK \
+    time java -Xmx7800m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $GATK \
         -T PrintReads \
         -R $REF \
         -I $SAMPLE.\$READGROUP.bwa.realign.fixed.bam \
@@ -264,12 +254,7 @@ then
         INPUT_STRING+=\" I=$SAMPLE.\$READGROUP.bwa.recal.bq.bam\"
     done &&
 
-    time java -Xmx5900m -Djava.io.tmpdir=$WORKDIR/tmp/ \
-        -XX:ParallelGCThreads=2 \
-        -jar $PICARD/MergeSamFiles.jar \
-        \$INPUT_STRING O=$SAMPLE.bwa.merged.bam \
-        SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true \
-        VALIDATION_STRINGENCY=SILENT &&
+    time java -Xmx5900m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MergeSamFiles.jar \$INPUT_STRING O=$SAMPLE.bwa.merged.bam SO=coordinate ASSUME_SORTED=true CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT &&
 
     for READGROUP in \`cat rglist\`
     do
@@ -286,7 +271,7 @@ fi
 
 #MERGE_CMD="echo merge_cmd command"
 
-MERGE_Q=`$QUICK_Q -m 5900mb -d $NODE -t 2 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q` &&
+MERGE_Q=`$QUICK_Q -m 5900mb -d $NODE -t 3 -n merge_${SAMPLE}_${NODE} -c " $MERGE_CMD " -q $QUEUE -W depend=afterok:$CALMD_Q` &&
 
 
 # -----------------------
@@ -296,13 +281,7 @@ MKDUP2_CMD="
 cd $WORKDIR &&
 if [ \`cat rglist | wc -l\` -gt 1 ] ;
 then
-    time java -Xmx7900m -Djava.io.tmpdir=$WORKDIR/tmp/ \
-        -XX:ParallelGCThreads=2 \
-        -jar $PICARD/MarkDuplicates.jar \
-        INPUT=$SAMPLE.bwa.merged.bam OUTPUT=$SAMPLE.bwa.bam \
-        ASSUME_SORTED=TRUE METRICS_FILE=/dev/null \
-        VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 \
-        CREATE_INDEX=true &&
+    time java -Xmx7900m -Djava.io.tmpdir=$WORKDIR/tmp/ -jar $PICARD/MarkDuplicates.jar INPUT=$SAMPLE.bwa.merged.bam OUTPUT=$SAMPLE.bwa.bam ASSUME_SORTED=TRUE METRICS_FILE=/dev/null VALIDATION_STRINGENCY=SILENT MAX_FILE_HANDLES=1000 CREATE_INDEX=true &&
 
     echo 'clean up files...' &&
     rm $SAMPLE.bwa.merged.bam $SAMPLE.bwa.merged.bai
@@ -311,16 +290,14 @@ fi
 
 #MKDUP2_CMD="echo mkdup2 command"
 
-MKDUP2_Q=`$QUICK_Q -m 7900mb -d $NODE -t 2 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q` &&
+MKDUP2_Q=`$QUICK_Q -m 7900mb -d $NODE -t 3 -n mkdup2_${SAMPLE}_${NODE} -c " $MKDUP2_CMD " -q $QUEUE -W depend=afterok:$MERGE_Q` &&
 
 
 # -----------------------
 # STEP 9: Reduce reads and move back to source
 
 REDUCE_CMD="cd $WORKDIR &&
-time java -Xmx9900m -Djava.io.tmpdir=$WORK_DIR/tmp/ \
-    -XX:ParallelGCThreads=1 \
-    -jar $GATK \
+time java -Xmx9900m -Djava.io.tmpdir=$WORK_DIR/tmp/ -jar $GATK \
     -T ReduceReads \
     -R $REF \
     -I $SAMPLE.bwa.bam \
