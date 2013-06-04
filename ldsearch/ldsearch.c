@@ -98,6 +98,8 @@ int usage()
 	  "  -h, --help             show this help and exit\n"
 	  "  -s, --num_samples      number of samples in file\n"
 	  "  -l, --num_loci         number of loci in file\n"
+	  "  -k, --set_size         number of loci in each set\n"
+	  "                           (currently 3 no matter what you put, sucka)\n"
 	  "  -d, --min_distance     minimum distance between loci\n"
 	  "  -x, --min_chi_sum      minimum chi-squared sum to print\n"
 	  "\n"
@@ -110,6 +112,7 @@ int main (int argc, char **argv)
   int min_distance = 0;
   int num_samples;
   int num_loci;
+  int set_size;
   double min_chi_sum = 0;
   char *file_name;
   char *samples_file_name;
@@ -118,7 +121,7 @@ int main (int argc, char **argv)
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "hd:s:l:x:")) != -1) {
+  while ((c = getopt(argc, argv, "hd:s:l:k:x:")) != -1) {
     switch (c) {
     case 'h':
       return usage();
@@ -130,6 +133,9 @@ int main (int argc, char **argv)
       break;
     case 'l':
       num_loci = atoi(optarg);
+      break;
+    case 'k':
+      set_size = 3;
       break;
     case 'x':
       min_chi_sum = atoi(optarg);
@@ -155,7 +161,7 @@ int main (int argc, char **argv)
     return usage();
   }
   
-  int max_line = 5000; // the maximum length of a line to read in
+  int max_line = 10000; // the maximum chars per line of file to read in. (should be more than double the number of samples)
   char *sep = "\t";
   
   FILE *f = fopen(file_name, "rt");
@@ -167,24 +173,29 @@ int main (int argc, char **argv)
   int j = 0;
   while (fgets(line, max_line, s) != NULL) {
     char *sample_name = strtok(line, sep);
+    char *sample_ethn = strtok(NULL, sep);
     char *sample_subpop = strtok(NULL, sep);
-    char *sample_superpop = strtok(NULL, sep);
 
     // copy the string into an array that will be retained
     // through the end of the run
     sample[0] = strdup(sample_name);
-    sample[1] = strdup(sample_subpop);
-    sample[2] = strdup(sample_superpop);
+    sample[1] = strdup(sample_ethn);
+    sample[2] = strdup(sample_subpop);
 
     ++j;
   }
   fclose(s);
 
+  // for (j = 0; j < num_samples; ++j) {
+  //   printf("%d\n", j);   
+  // }
+  
   // array of arrays containing genotype info for each sample
   // at each locus
   char *chrArr[num_loci];
   int posArr[num_loci];
   char *geneArr[num_loci];
+  int num_informative[num_loci];
   int *M[num_loci];
   
   // chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
@@ -214,6 +225,7 @@ int main (int argc, char **argv)
       ++i;
     }
     
+    // store the genotypes into the locus x gt matrix
     M[j] = locus_gts;
     ++j;
   }
