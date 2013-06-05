@@ -17,7 +17,7 @@ double get_X(double observed,
 void get_expected(double *rates_1,
                   double *rates_2,
                   double *rates_3,
-                  int num_samples,
+                  int num_inf,
                   double *d_expected)
 {
   int i,j,k;
@@ -27,26 +27,35 @@ void get_expected(double *rates_1,
 	d_expected[9*i + 3*j + 1*k] = rates_1[i] * 
 	  rates_2[j] *
 	  rates_3[k] * 
-	  num_samples;
+	  num_inf;
       }
 }
 
-void *get_observed(int *loci_1,
-                   int *loci_2,
-                   int *loci_3,
+void *get_observed(int *locus_1,
+                   int *locus_2,
+                   int *locus_3,
                    int num_samples,
-                   double *d_observed)
+                   double *d_observed,
+		   double multi_informative)
 {
   int i;
   for (i = 0; i < 27; ++i) 
-    d_observed[i]=0;
+    d_observed[i] = 0;
   
   int genotype;
   for (i = 0; i < num_samples; ++i) {
-    genotype = 9 * loci_1[i] +
-      3 * loci_2[i] +
-      1 * loci_3[i];
-    d_observed[genotype] += 1;
+    // only assess samples that are informative at all k loci
+    if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
+      // multi_informative is the number of samples that are informative
+      // at ALL k loci
+      multi_informative = 3;
+
+      // bitwise (tripwise?) representation of genotype
+      genotype = 9 * locus_1[i] +
+	3 * locus_2[i] +
+	1 * locus_3[i];
+      d_observed[genotype] += 1;
+    }
   }
 }
 
@@ -65,8 +74,9 @@ void get_rates(int *loci,
       ++num_hom_ref;
     else if (loci_i == 1)
       ++num_het;
-    else
+    else if (loci_i == 2)
       ++num_hom_alt;
+    // else it's -1 (uninformative)
   }
 
   int total = num_hom_ref + num_het + num_hom_alt;
@@ -161,7 +171,8 @@ int main (int argc, char **argv)
     return usage();
   }
   
-  int max_line = 10000; // the maximum chars per line of file to read in. (should be more than double the number of samples)
+  // the maximum chars per line of file to read in. (should be more than double the number of samples)
+  int max_line = 10000;
   char *sep = "\t";
   
   FILE *f = fopen(file_name, "rt");
@@ -204,6 +215,7 @@ int main (int argc, char **argv)
     char *chr = strtok(line, sep);
     int pos = atoi(strtok(NULL, sep));
     char *gene = strtok(NULL, sep);
+    int inf = 0;
     
     char *rate_1 = strtok(NULL, sep);
     char *rate_2 = strtok(NULL, sep);
@@ -222,11 +234,17 @@ int main (int argc, char **argv)
     while ((tok != NULL) && (i < num_samples)) {
       locus_gts[i] = atoi(tok);
       tok = strtok(NULL,sep);
+
+      if (locus_gts[i] != -1) {
+	++inf;
+      }
       ++i;
     }
     
     // store the genotypes into the locus x gt matrix
     M[j] = locus_gts;
+    // store the number of informative samples at locus
+    num_informative[j] = inf;
     ++j;
   }
   fclose(f);
@@ -242,7 +260,9 @@ int main (int argc, char **argv)
     get_rates(M[i], num_samples, rate);
     rates[i] = rate;
   }
-  
+
+  // number of samples at are informative at all loci in k
+  double num_multi_informative;  
   for (i = 0; i < num_loci; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       for (k = j + 1; k < num_loci; ++k) {
@@ -254,17 +274,21 @@ int main (int argc, char **argv)
 	  continue;
 	}	
 
-	get_expected(rates[i],
-		     rates[j],
-		     rates[k],
-		     num_samples,
-		     expected);
-	
 	get_observed(M[i],
 		     M[j],
 		     M[k],
 		     num_samples,
-		     observed);
+		     observed,
+		     num_multi_informative);
+
+	printf("%f\n", observed[4]);
+	printf("%f\n", num_multi_informative);
+
+        get_expected(rates[i],
+                     rates[j],
+                     rates[k],
+                     num_multi_informative,
+                     expected);
 
 	// calculate chi values for each cell and the chi_sum value for the trio
 	chi_sum = 0;
