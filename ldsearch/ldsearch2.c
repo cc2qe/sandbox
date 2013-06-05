@@ -4,18 +4,11 @@
 #include <unistd.h>
 
 double get_X(double observed,
-             double expected,
-	     int yates,
-	     double min_exp)
+             double expected)
 {
   double numer;
-  if (expected > min_exp) {
-    if (yates) {
-      numer = (abs(observed - expected) - 0.5);
-    }
-    else {
-      numer = (observed - expected);
-    }
+  if (expected != 0) {
+    numer = (observed - expected);
     return (numer*numer)/expected;
   }
   else return 0;
@@ -39,11 +32,11 @@ void get_expected(double *rates_1,
 }
 
 void *get_observed(int *locus_1,
-                   int *locus_2,
-                   int *locus_3,
-                   int num_samples,
-                   double *d_observed,
-		   int *multi_informative)
+		  int *locus_2,
+		  int *locus_3,
+		  int num_samples,
+		  double *d_observed,
+		  int *multi_informative)
 {
   int i;
   for (i = 0; i < 27; ++i) 
@@ -55,7 +48,10 @@ void *get_observed(int *locus_1,
     if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
       // multi_informative is the number of samples that are informative
       // at ALL k loci
-      ++multi_informative[0];
+      printf("hi\n");
+      *multi_informative += 1 ;
+      printf("%d\n", *multi_informative);
+      printf("lo\n");
 
       // bitwise (tripwise?) representation of genotype
       genotype = 9 * locus_1[i] +
@@ -112,17 +108,13 @@ int usage()
 	  "                           and subpopulations\n"
 	  "\n"
 	  "optional arguments:\n"
-	  "  -h                     show this help and exit\n"
-	  "  -s NUM_SAMPLES         number of samples in file\n"
-	  "  -l NUM_LOCI            number of loci in file\n"
-	  "  -k SET_SIZE            number of loci in each set\n"
+	  "  -h, --help             show this help and exit\n"
+	  "  -s, --num_samples      number of samples in file\n"
+	  "  -l, --num_loci         number of loci in file\n"
+	  "  -k, --set_size         number of loci in each set\n"
 	  "                           (currently 3 no matter what you put, sucka)\n"
-	  "  -d MIN_DISTANCE        minimum distance between loci\n"
-	  "  -x MIN_CHI             minimum chi-squared sum to print\n"
-	  "  -e MIN_EXP             conservative chi-square, cells only contribute\n"
-	  "                           if the expected freq is greater than MIN_EXP\n"
-	  "                           (default: 0)\n"
-	  "  -y                     enable yates correction\n"
+	  "  -d, --min_distance     minimum distance between loci\n"
+	  "  -x, --min_chi_sum      minimum chi-squared sum to print\n"
 	  "\n"
 	  );
   return 1;
@@ -135,8 +127,6 @@ int main (int argc, char **argv)
   int num_loci;
   int set_size;
   double min_chi_sum = 0;
-  int yates = 0;
-  double min_exp = 0.0;
   char *file_name;
   char *samples_file_name;
 
@@ -144,7 +134,7 @@ int main (int argc, char **argv)
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "hd:s:l:k:x:e:y")) != -1) {
+  while ((c = getopt(argc, argv, "hd:s:l:k:x:")) != -1) {
     switch (c) {
     case 'h':
       return usage();
@@ -162,12 +152,6 @@ int main (int argc, char **argv)
       break;
     case 'x':
       min_chi_sum = atoi(optarg);
-      break;
-    case 'y':
-      yates = 1;
-      break;
-    case 'e':
-      min_exp = atof(optarg);
       break;
     case '?':
       if (optopt == 'c')
@@ -281,7 +265,7 @@ int main (int argc, char **argv)
   }
 
   // number of samples at are informative at all loci in k
-  int num_multi_informative[1];
+  int num_multi_informative = (int) malloc(sizeof(int));
 
   for (i = 0; i < num_loci; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
@@ -294,24 +278,25 @@ int main (int argc, char **argv)
 	  continue;
 	}	
 
-	num_multi_informative[0] = 0;
 	get_observed(M[i],
 		     M[j],
 		     M[k],
 		     num_samples,
 		     observed,
-		     num_multi_informative);
+		     &num_multi_informative);
+
+	printf("%d\n", num_multi_informative);
 
         get_expected(rates[i],
                      rates[j],
                      rates[k],
-                     num_multi_informative[0],
+                     num_multi_informative,
                      expected);
 
 	// calculate chi values for each cell and the chi_sum value for the trio
 	chi_sum = 0;
 	for (l = 0; l < 27; ++l) {
-	  chi[l] = get_X(observed[l],expected[l], yates, min_exp);
+	  chi[l] = get_X(observed[l],expected[l]);
 	  chi_sum += chi[l];
 	}
 
