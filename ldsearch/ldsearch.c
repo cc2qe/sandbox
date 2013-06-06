@@ -5,17 +5,11 @@
 
 double get_X(double observed,
              double expected,
-	     int yates,
 	     double min_exp)
 {
   double numer;
   if (expected > min_exp) {
-    if (yates) {
-      numer = (abs(observed - expected) - 0.5);
-    }
-    else {
-      numer = (observed - expected);
-    }
+    numer = (observed - expected);
     return (numer*numer)/expected;
   }
   else return 0;
@@ -52,17 +46,17 @@ void get_observed(int *locus_1,
   int genotype;
   for (i = 0; i < num_samples; ++i) {
     // only assess samples that are informative at all k loci
-    //if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
+    if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
       // multi_informative is the number of samples that are informative
       // at ALL k loci
-      //*multi_informative += 1;
+      *multi_informative += 1;
 
       // bitwise (tripwise?) representation of genotype
       genotype = 9 * locus_1[i] +
 	3 * locus_2[i] +
 	1 * locus_3[i];
       d_observed[genotype] += 1;
-      //}
+    }
   }
 }
 
@@ -146,7 +140,6 @@ int usage()
 	  "  -e MIN_EXP             conservative chi-square, cells only contribute\n"
 	  "                           if the expected freq is greater than MIN_EXP\n"
 	  "                           (default: 0)\n"
-	  "  -y                     enable yates correction\n"
 	  "  -b                     brief but faster output\n"
 	  "\n"
 	  );
@@ -170,7 +163,7 @@ int main (int argc, char **argv)
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "hd:s:l:k:x:e:yb")) != -1) {
+  while ((c = getopt(argc, argv, "hd:s:l:k:x:e:b")) != -1) {
     switch (c) {
     case 'h':
       return usage();
@@ -338,27 +331,24 @@ int main (int argc, char **argv)
 		     num_samples,
 		     observed,
 		     &num_multi_informative);
-
+      
         get_expected(rates[i],
                      rates[j],
                      rates[k],
-		     //                     num_multi_informative,
-		     num_samples,
+		     num_multi_informative,
                      expected);
 
 	// calculate chi values for each cell and the chi_sum value for the trio
 	chi_sum = 0;
 	for (l = 0; l < 27; ++l) {
-	  chi[l] = get_X(observed[l],expected[l], yates, min_exp);
+	  chi[l] = get_X(observed[l],expected[l], min_exp);
 	  chi_sum += chi[l];
 	}
 
 	if (chi_sum >= min_chi_sum) {
 	  if (brief) {
-	    printf("%s\t%d\t%s\t%d\t%s\t%d\t%f\n",
-		   chrArr[i],posArr[i],
-		   chrArr[j],posArr[j],
-		   chrArr[k],posArr[k],
+	    printf("%d\t%d\t%d\t%f\n",
+		   i,j,k,
 		   chi_sum);
 	  }
 
