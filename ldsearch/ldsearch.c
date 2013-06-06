@@ -38,7 +38,7 @@ void get_expected(double *rates_1,
       }
 }
 
-void *get_observed(int *locus_1,
+void get_observed(int *locus_1,
                    int *locus_2,
                    int *locus_3,
                    int num_samples,
@@ -52,17 +52,17 @@ void *get_observed(int *locus_1,
   int genotype;
   for (i = 0; i < num_samples; ++i) {
     // only assess samples that are informative at all k loci
-    if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
+    //if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
       // multi_informative is the number of samples that are informative
       // at ALL k loci
-      *multi_informative += 1;
+      //*multi_informative += 1;
 
       // bitwise (tripwise?) representation of genotype
       genotype = 9 * locus_1[i] +
 	3 * locus_2[i] +
 	1 * locus_3[i];
       d_observed[genotype] += 1;
-    }
+      //}
   }
 }
 
@@ -147,7 +147,7 @@ int usage()
 	  "                           if the expected freq is greater than MIN_EXP\n"
 	  "                           (default: 0)\n"
 	  "  -y                     enable yates correction\n"
-	  "  -b                     brief output, only print one line per locus set\n"
+	  "  -b                     brief but faster output\n"
 	  "\n"
 	  );
   return 1;
@@ -300,8 +300,10 @@ int main (int argc, char **argv)
   // generate array of genotypes (eg 000, 012, 202) so we don't have to
   // call the dec to base function for every locus
   int m_gts[27];
-  for (j = 0; j < 27; ++j) {
-    m_gts[j] = decToBase(j, set_size);
+  if (! brief) {
+    for (j = 0; j < 27; ++j) {
+      m_gts[j] = decToBase(j, set_size);
+    }
   }
 
   int k,l;
@@ -340,7 +342,8 @@ int main (int argc, char **argv)
         get_expected(rates[i],
                      rates[j],
                      rates[k],
-                     num_multi_informative,
+		     //                     num_multi_informative,
+		     num_samples,
                      expected);
 
 	// calculate chi values for each cell and the chi_sum value for the trio
@@ -352,10 +355,10 @@ int main (int argc, char **argv)
 
 	if (chi_sum >= min_chi_sum) {
 	  if (brief) {
-	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t-\t-\t-\t%f\n",
-		   chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
-		   chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
-		   chrArr[k],posArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
+	    printf("%s\t%d\t%s\t%d\t%s\t%d\t%f\n",
+		   chrArr[i],posArr[i],
+		   chrArr[j],posArr[j],
+		   chrArr[k],posArr[k],
 		   chi_sum);
 	  }
 
