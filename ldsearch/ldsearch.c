@@ -237,9 +237,9 @@ int main (int argc, char **argv)
 
     // copy the string into an array that will be retained
     // through the end of the run
-    sample[0] = strdup(sample_name);
-    sample[1] = strdup(sample_ethn);
-    sample[2] = strdup(sample_subpop);
+    //sample[0] = strdup(sample_name);
+    //sample[1] = strdup(sample_ethn);
+    //sample[2] = strdup(sample_subpop);
 
     ++j;
   }
@@ -299,9 +299,9 @@ int main (int argc, char **argv)
 
   // generate array of genotypes (eg 000, 012, 202) so we don't have to
   // call the dec to base function for every locus
+  int m_gts[27];
   for (j = 0; j < 27; ++j) {
-    printf("%d\n", j);
-    printf("%d\n", decToBase(j, set_size));
+    m_gts[j] = decToBase(j, set_size);
   }
 
   int k,l;
@@ -365,7 +365,7 @@ int main (int argc, char **argv)
 		     chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
 		     chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
 		     chrArr[k],posArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
-		     decToBase(l,3),
+		     m_gts[l],
 		     observed[l],expected[l],observed[l]-expected[l],
 		     chi[l],chi_sum);
 	    }
@@ -374,5 +374,11 @@ int main (int argc, char **argv)
       }
     }
   }
+  
+  for (j = 0; j < num_loci; ++j) {
+    free(chrArr[j]);
+    free(geneArr[j]);
+  }
+
   return 0;
 }
