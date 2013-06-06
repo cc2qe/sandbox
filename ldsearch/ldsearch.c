@@ -55,7 +55,7 @@ void *get_observed(int *locus_1,
     if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
       // multi_informative is the number of samples that are informative
       // at ALL k loci
-      ++multi_informative[0];
+      *multi_informative += 1;
 
       // bitwise (tripwise?) representation of genotype
       genotype = 9 * locus_1[i] +
@@ -91,6 +91,28 @@ void get_rates(int *loci,
   rates[0] = ((double)num_hom_ref) / ((double)total);
   rates[1] = ((double)num_het) / ((double)total);
   rates[2] = ((double)num_hom_alt) / ((double)total);
+}
+
+int decToBase(int x,
+              int base)
+{
+  int i = 0;
+  int r[64];
+  char *buf = malloc(64);
+  int x_b = 0;
+
+  while(x != 0) {
+    r[i] = x % base;
+    x = x / base;
+    ++i;
+  }
+
+  for ( --i; i >= 0; --i) {
+    sprintf(buf, "%s%d", buf, r[i]);
+  }
+  x_b = atoi(buf);
+
+  return x_b;
 }
 
 void parseArgs ()
@@ -280,9 +302,6 @@ int main (int argc, char **argv)
     rates[i] = rate;
   }
 
-  // number of samples at are informative at all loci in k
-  int num_multi_informative[1];
-
   for (i = 0; i < num_loci; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       for (k = j + 1; k < num_loci; ++k) {
@@ -293,19 +312,21 @@ int main (int argc, char **argv)
 	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(posArr[j] - posArr[k]) < min_distance) {
 	  continue;
 	}	
-
-	num_multi_informative[0] = 0;
+	
+	// number of samples at are informative at all loci in k
+	int num_multi_informative = 0;
+	
 	get_observed(M[i],
 		     M[j],
 		     M[k],
 		     num_samples,
 		     observed,
-		     num_multi_informative);
+		     &num_multi_informative);
 
         get_expected(rates[i],
                      rates[j],
                      rates[k],
-                     num_multi_informative[0],
+                     num_multi_informative,
                      expected);
 
 	// calculate chi values for each cell and the chi_sum value for the trio
@@ -317,10 +338,11 @@ int main (int argc, char **argv)
 
 	if (chi_sum >= min_chi_sum) {
 	  for (l = 0; l < 27; ++l) {
-	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%.0f|%.1f|%.1f\t%f\t%f\n",
+	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%03d\t%.0f|%.1f|%.1f\t%f\t%f\n",
 	  	   chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
 		   chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
 		   chrArr[k],posArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
+		   decToBase(l,3),
 		   observed[l],expected[l],observed[l]-expected[l],
 		   chi[l],chi_sum);
 	  }
