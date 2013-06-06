@@ -94,23 +94,25 @@ void get_rates(int *loci,
 }
 
 int decToBase(int x,
-              int base)
+	      int base)
 {
   int i = 0;
-  int r[64];
-  char *buf = malloc(64);
+  int digit;
   int x_b = 0;
 
   while(x != 0) {
-    r[i] = x % base;
+    digit = x % base;
     x = x / base;
+
+    int tenPower = 1;
+    int j;
+    for (j = 0; j < i; ++j) {
+      tenPower = tenPower * 10;
+    }
+    x_b += (digit * tenPower);
+
     ++i;
   }
-
-  for ( --i; i >= 0; --i) {
-    sprintf(buf, "%s%d", buf, r[i]);
-  }
-  x_b = atoi(buf);
 
   return x_b;
 }
@@ -145,6 +147,7 @@ int usage()
 	  "                           if the expected freq is greater than MIN_EXP\n"
 	  "                           (default: 0)\n"
 	  "  -y                     enable yates correction\n"
+	  "  -b                     brief output, only print one line per locus set\n"
 	  "\n"
 	  );
   return 1;
@@ -159,6 +162,7 @@ int main (int argc, char **argv)
   double min_chi_sum = 0;
   int yates = 0;
   double min_exp = 0.0;
+  int brief = 0;
   char *file_name;
   char *samples_file_name;
 
@@ -166,7 +170,7 @@ int main (int argc, char **argv)
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "hd:s:l:k:x:e:y")) != -1) {
+  while ((c = getopt(argc, argv, "hd:s:l:k:x:e:yb")) != -1) {
     switch (c) {
     case 'h':
       return usage();
@@ -190,6 +194,9 @@ int main (int argc, char **argv)
       break;
     case 'e':
       min_exp = atof(optarg);
+      break;
+    case 'b':
+      brief = 1;
       break;
     case '?':
       if (optopt == 'c')
@@ -290,6 +297,13 @@ int main (int argc, char **argv)
   }
   fclose(f);
 
+  // generate array of genotypes (eg 000, 012, 202) so we don't have to
+  // call the dec to base function for every locus
+  for (j = 0; j < 27; ++j) {
+    printf("%d\n", j);
+    printf("%d\n", decToBase(j, set_size));
+  }
+
   int k,l;
   double rates_1[3], rates_2[3], rates_3[3];
   double expected[27], observed[27], chi[27];
@@ -337,14 +351,24 @@ int main (int argc, char **argv)
 	}
 
 	if (chi_sum >= min_chi_sum) {
-	  for (l = 0; l < 27; ++l) {
-	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%03d\t%.0f|%.1f|%.1f\t%f\t%f\n",
-	  	   chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
+	  if (brief) {
+	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t-\t-\t-\t%f\n",
+		   chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
 		   chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
 		   chrArr[k],posArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
-		   decToBase(l,3),
-		   observed[l],expected[l],observed[l]-expected[l],
-		   chi[l],chi_sum);
+		   chi_sum);
+	  }
+
+	  else {
+	    for (l = 0; l < 27; ++l) {
+	      printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%03d\t%.0f|%.1f|%.1f\t%f\t%f\n",
+		     chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
+		     chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
+		     chrArr[k],posArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
+		     decToBase(l,3),
+		     observed[l],expected[l],observed[l]-expected[l],
+		     chi[l],chi_sum);
+	    }
 	  }
 	}
       }

@@ -7,37 +7,32 @@ int decToBase(int x,
 	      int base)
 {
   int i = 0;
-  int r[64];
-  char *buf = malloc(64);
+  int digit;
   int x_b = 0;
-
   
   while(x != 0) {
-    r[i] = x % base;
+    digit = x % base;
     x = x / base;
+
+    int tenPower = 1;
+    int j;
+    for (j = 0; j < i; ++j) {
+      tenPower = tenPower * 10;
+    }
+    x_b += (digit * tenPower);
+
     ++i;
   }
-
-  for (--i; i >= 0; --i) {
-    sprintf(buf, "%s%d", buf, r[i]);
-  }
-  x_b = atoi(buf);
 
   return x_b;
 }
 
 int main()
 {
-  //int j;
-  //for (j = 0; j <= 3; ++j) {
-  //  printf("%d\n", j);
-  //  printf("%d\n", decToBase(20,3));
-  //}
-
-  printf("%d\n", decToBase(5,3));
-  printf("%d\n", decToBase(6,3));
-  printf("%d\n", decToBase(7,3));
-  printf("%d\n", decToBase(8,3));
+  int i;
+  for (i = 0; i < 27; ++i) {
+    printf("%03d\n", decToBase(i,3));
+  }
 
   return 0;
 }
