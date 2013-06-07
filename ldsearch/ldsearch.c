@@ -8,7 +8,7 @@ double get_X(double observed,
 	     double min_exp)
 {
   double numer;
-  if (expected > min_exp) {
+  if (expected > min_exp && expected != 0) {
     numer = (observed - expected);
     return (numer*numer)/expected;
   }
@@ -139,7 +139,7 @@ int usage()
 	  "  -x MIN_CHI             minimum chi-squared sum to print\n"
 	  "  -e MIN_EXP             conservative chi-square, cells only contribute\n"
 	  "                           if the expected freq is greater than MIN_EXP\n"
-	  "                           (default: 0)\n"
+	  "                           (default: 5)\n"
 	  "  -b                     brief but faster output\n"
 	  "\n"
 	  );
@@ -154,7 +154,7 @@ int main (int argc, char **argv)
   int set_size;
   double min_chi_sum = 0;
   int yates = 0;
-  double min_exp = 0.0;
+  double min_exp = 5.0;
   int brief = 0;
   char *file_name;
   char *samples_file_name;
