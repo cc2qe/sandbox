@@ -48,10 +48,7 @@ void *get_observed(int *locus_1,
     if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
       // multi_informative is the number of samples that are informative
       // at ALL k loci
-      printf("hi\n");
       *multi_informative += 1 ;
-      printf("%d\n", *multi_informative);
-      printf("lo\n");
 
       // bitwise (tripwise?) representation of genotype
       genotype = 9 * locus_1[i] +
@@ -264,9 +261,6 @@ int main (int argc, char **argv)
     rates[i] = rate;
   }
 
-  // number of samples at are informative at all loci in k
-  int num_multi_informative = (int) malloc(sizeof(int));
-
   for (i = 0; i < num_loci; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       for (k = j + 1; k < num_loci; ++k) {
@@ -278,14 +272,15 @@ int main (int argc, char **argv)
 	  continue;
 	}	
 
+	// number of samples at are informative at all loci in k	
+	int num_multi_informative = 0;
+
 	get_observed(M[i],
 		     M[j],
 		     M[k],
 		     num_samples,
 		     observed,
 		     &num_multi_informative);
-
-	printf("%d\n", num_multi_informative);
 
         get_expected(rates[i],
                      rates[j],
