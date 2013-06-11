@@ -295,7 +295,7 @@ int main (int argc, char **argv)
   int m_gts[27];
   if (! brief) {
     for (j = 0; j < 27; ++j) {
-      m_gts[j] = decToBase(j, set_size);
+      m_gts[j] = decToBase(j, 3);
     }
   }
 
