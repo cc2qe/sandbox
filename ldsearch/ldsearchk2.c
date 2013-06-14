@@ -17,44 +17,39 @@ double get_X(double observed,
 
 void get_expected(double *rates_1,
                   double *rates_2,
-                  double *rates_3,
                   int num_inf,
                   double *d_expected)
 {
-  int i,j,k;
+  int i,j;
   for (i= 0; i < 3; ++i)
-    for (j= 0; j < 3; ++j)
-      for (k= 0; k < 3; ++k) {
-	d_expected[9*i + 3*j + 1*k] = rates_1[i] * 
-	  rates_2[j] *
-	  rates_3[k] * 
-	  num_inf;
-      }
+    for (j= 0; j < 3; ++j) {
+      d_expected[3*i + j] = rates_1[i] * 
+	rates_2[j] *
+	num_inf;
+    }
 }
 
 void get_observed(int *locus_1,
                    int *locus_2,
-                   int *locus_3,
                    int num_samples,
                    double *d_observed,
 		   int *multi_informative)
 {
   int i;
-  for (i = 0; i < 27; ++i) 
+  for (i = 0; i < 9; ++i) 
     d_observed[i] = 0;
 
   int genotype;
   for (i = 0; i < num_samples; ++i) {
     // only assess samples that are informative at all k loci
-    if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
+    if (locus_1[i] >= 0 && locus_2[i] >= 0) {
       // multi_informative is the number of samples that are informative
       // at ALL k loci
       *multi_informative += 1;
 
       // bitwise (tripwise?) representation of genotype
-      genotype = 9 * locus_1[i] +
-	3 * locus_2[i] +
-	1 * locus_3[i];
+      genotype = 3 * locus_1[i] +
+	1 * locus_2[i];
       d_observed[genotype] += 1;
     }
   }
@@ -177,7 +172,7 @@ int main (int argc, char **argv)
       num_loci = atoi(optarg);
       break;
     case 'k':
-      set_size = 3;
+      set_size = 2;
       break;
     case 'x':
       min_chi_sum = atoi(optarg);
@@ -292,16 +287,16 @@ int main (int argc, char **argv)
 
   // generate array of genotypes (eg 000, 012, 202) so we don't have to
   // call the dec to base function for every locus
-  int m_gts[27];
+  int m_gts[9];
   if (! brief) {
-    for (j = 0; j < 27; ++j) {
+    for (j = 0; j < 9; ++j) {
       m_gts[j] = decToBase(j, 3);
     }
   }
 
   int k,l;
-  double rates_1[3], rates_2[3], rates_3[3];
-  double expected[27], observed[27], chi[27];
+  double rates_1[3], rates_2[3];
+  double expected[9], observed[9], chi[9];
   double chi_sum;
   
   double *rates[num_loci];
@@ -313,55 +308,49 @@ int main (int argc, char **argv)
 
   for (i = 0; i < num_loci; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
-      for (k = j + 1; k < num_loci; ++k) {
-	// only calc chi-square if loci are each separated by
-	// minimum distance
-	if (strcmp(chrArr[i],chrArr[j]) == 0 && abs(posArr[i] - posArr[j]) < min_distance ||
-	    strcmp(chrArr[i],chrArr[k]) == 0 && abs(posArr[i] - posArr[k]) < min_distance ||
-	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(posArr[j] - posArr[k]) < min_distance) {
-	  continue;
-	}	
+      // only calc chi-square if loci are each separated by
+      // minimum distance
+      if (strcmp(chrArr[i],chrArr[j]) == 0 && abs(posArr[i] - posArr[j]) < min_distance ||
+	  strcmp(chrArr[i],chrArr[k]) == 0 && abs(posArr[i] - posArr[k]) < min_distance) {
+	continue;
+      }	
 	
-	// number of samples at are informative at all loci in k
-	int num_multi_informative = 0;
-	
-	get_observed(M[i],
-		     M[j],
-		     M[k],
-		     num_samples,
-		     observed,
-		     &num_multi_informative);
+      // number of samples at are informative at all loci in k
+      int num_multi_informative = 0;
       
-        get_expected(rates[i],
-                     rates[j],
-                     rates[k],
-		     num_multi_informative,
-                     expected);
+      get_observed(M[i],
+		   M[j],
+		   num_samples,
+		   observed,
+		   &num_multi_informative);
+      
+      get_expected(rates[i],
+		   rates[j],
+		   num_multi_informative,
+		   expected);
 
-	// calculate chi values for each cell and the chi_sum value for the trio
-	chi_sum = 0;
-	for (l = 0; l < 27; ++l) {
-	  chi[l] = get_X(observed[l],expected[l], min_exp);
-	  chi_sum += chi[l];
+      // calculate chi values for each cell and the chi_sum value for the trio
+      chi_sum = 0;
+      for (l = 0; l < 9; ++l) {
+	chi[l] = get_X(observed[l],expected[l], min_exp);
+	chi_sum += chi[l];
+      }
+
+      if (chi_sum >= min_chi_sum) {
+	if (brief) {
+	  printf("%d\t%d\t%f\n",
+		 i,j,
+		 chi_sum);
 	}
-
-	if (chi_sum >= min_chi_sum) {
-	  if (brief) {
-	    printf("%d\t%d\t%d\t%f\n",
-		   i,j,k,
-		   chi_sum);
-	  }
-
-	  else {
-	    for (l = 0; l < 27; ++l) {
-	      printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%03d\t%.0f|%.1f|%.1f\t%f\t%f\n",
-		     chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
-		     chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
-		     chrArr[k],posArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
-		     m_gts[l],
-		     observed[l],expected[l],observed[l]-expected[l],
-		     chi[l],chi_sum);
-	    }
+	
+	else {
+	  for (l = 0; l < 9; ++l) {
+	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%02d\t%.0f|%.1f|%.1f\t%f\t%f\n",
+		   chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
+		   chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
+		   m_gts[l],
+		   observed[l],expected[l],observed[l]-expected[l],
+		   chi[l],chi_sum);
 	  }
 	}
       }
@@ -372,6 +361,6 @@ int main (int argc, char **argv)
     free(chrArr[j]);
     free(geneArr[j]);
   }
-
+  
   return 0;
 }

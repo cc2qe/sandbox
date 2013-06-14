@@ -3,6 +3,16 @@
 #include <string.h>
 #include <unistd.h>
 
+int powi(int x, int y)
+{
+  int product = 1;
+  int i;
+  for (i = 0; i < y; ++i) {
+    product *= x;
+  }
+  return product;
+}
+
 double get_X(double observed,
              double expected,
 	     double min_exp)
@@ -15,46 +25,54 @@ double get_X(double observed,
   else return 0;
 }
 
-void get_expected(double *rates_1,
-                  double *rates_2,
-                  double *rates_3,
+void get_expected(double **rates,
+		  int *locus_indices,
+		  int set_size,
+		  int num_gt_combos,
                   int num_inf,
                   double *d_expected)
 {
-  int i,j,k;
-  for (i= 0; i < 3; ++i)
-    for (j= 0; j < 3; ++j)
-      for (k= 0; k < 3; ++k) {
-	d_expected[9*i + 3*j + 1*k] = rates_1[i] * 
-	  rates_2[j] *
-	  rates_3[k] * 
-	  num_inf;
-      }
+  int i, j;
+  for (i = 0; i < num_gt_combos; ++i) {
+    int itr = i;
+    double exp_rate = 1;
+    
+    for (j = 0; j < set_size; ++j) {
+      int p = powi(3,(set_size - j - 1));
+      exp_rate *= rates[locus_indices[j]][itr / p];
+      itr = itr % p;
+    }
+    d_expected[i] = exp_rate * num_inf;
+  }
 }
 
-void get_observed(int *locus_1,
-                   int *locus_2,
-                   int *locus_3,
-                   int num_samples,
-                   double *d_observed,
-		   int *multi_informative)
+void get_observed(int **M,
+		  int *locus_indices,
+		  int set_size,
+		  int num_gt_combos,
+		  int num_samples,
+		  int *multi_informative,
+		  double *d_observed)
 {
-  int i;
-  for (i = 0; i < 27; ++i) 
+  int i, j;
+  for (i = 0; i < num_gt_combos; ++i) 
     d_observed[i] = 0;
 
   int genotype;
   for (i = 0; i < num_samples; ++i) {
     // only assess samples that are informative at all k loci
-    if (locus_1[i] >= 0 && locus_2[i] >= 0 && locus_3[i] >= 0) {
-      // multi_informative is the number of samples that are informative
-      // at ALL k loci
+    int checkInf = 1;
+    for (j = 0; j < set_size; ++j) {
+      checkInf *= (M[locus_indices[j]][i] + 1);
+    }
+    if (checkInf != 0) {
       *multi_informative += 1;
 
       // bitwise (tripwise?) representation of genotype
-      genotype = 9 * locus_1[i] +
-	3 * locus_2[i] +
-	1 * locus_3[i];
+      genotype = 0;
+      for (j = 0; j < set_size; ++j) {
+	genotype += powi(3,j) * M[locus_indices[set_size-j-1]][i];
+      }
       d_observed[genotype] += 1;
     }
   }
@@ -101,13 +119,12 @@ int decToBase(int x,
     int tenPower = 1;
     int j;
     for (j = 0; j < i; ++j) {
-      tenPower = tenPower * 10;
+      tenPower *= 10;
     }
     x_b += (digit * tenPower);
 
     ++i;
   }
-
   return x_b;
 }
 
@@ -177,7 +194,7 @@ int main (int argc, char **argv)
       num_loci = atoi(optarg);
       break;
     case 'k':
-      set_size = 3;
+      set_size = atoi(optarg);
       break;
     case 'x':
       min_chi_sum = atoi(optarg);
@@ -249,6 +266,7 @@ int main (int argc, char **argv)
   char *geneArr[num_loci];
   int num_informative[num_loci];
   int *M[num_loci];
+  int num_gt_combos = powi(3,set_size);
   
   // chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
   j = 0;
@@ -292,21 +310,23 @@ int main (int argc, char **argv)
 
   // generate array of genotypes (eg 000, 012, 202) so we don't have to
   // call the dec to base function for every locus
-  int m_gts[27];
+  char m_gts[num_gt_combos][set_size + 1];
   if (! brief) {
-    for (j = 0; j < 27; ++j) {
-      m_gts[j] = decToBase(j, set_size);
+    for (j = 0; j < num_gt_combos; ++j) {
+      char myGt[9];
+      sprintf(myGt, "%08d", decToBase(j, 3));
+      sprintf(m_gts[j], "%s", &myGt[8-set_size]);
     }
   }
 
   int k,l;
   double rates_1[3], rates_2[3], rates_3[3];
-  double expected[27], observed[27], chi[27];
+  double expected[num_gt_combos], observed[num_gt_combos], chi[num_gt_combos];
   double chi_sum;
   
   double *rates[num_loci];
   for (i = 0; i < num_loci; ++i) {
-    double *rate = (double *) malloc(3 * sizeof(double));
+    double *rate = (double *) malloc(set_size * sizeof(double));
     get_rates(M[i], num_samples, rate);
     rates[i] = rate;
   }
@@ -321,26 +341,35 @@ int main (int argc, char **argv)
 	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(posArr[j] - posArr[k]) < min_distance) {
 	  continue;
 	}	
+
+	// create an array of the [set_size] locus indices that will be interrogated
+	int locus_indices[set_size];
+	locus_indices[0] = i;
+	locus_indices[1] = j;
+	locus_indices[2] = k;
+	
 	
 	// number of samples at are informative at all loci in k
 	int num_multi_informative = 0;
 	
-	get_observed(M[i],
-		     M[j],
-		     M[k],
+	get_observed(M,
+		     locus_indices,
+		     set_size,
+		     num_gt_combos,
 		     num_samples,
-		     observed,
-		     &num_multi_informative);
+		     &num_multi_informative,
+		     observed);
       
-        get_expected(rates[i],
-                     rates[j],
-                     rates[k],
+        get_expected(rates,
+		     locus_indices,
+		     set_size,
+		     num_gt_combos,
 		     num_multi_informative,
                      expected);
 
 	// calculate chi values for each cell and the chi_sum value for the trio
 	chi_sum = 0;
-	for (l = 0; l < 27; ++l) {
+	for (l = 0; l < num_gt_combos; ++l) {
 	  chi[l] = get_X(observed[l],expected[l], min_exp);
 	  chi_sum += chi[l];
 	}
@@ -353,8 +382,8 @@ int main (int argc, char **argv)
 	  }
 
 	  else {
-	    for (l = 0; l < 27; ++l) {
-	      printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%03d\t%.0f|%.1f|%.1f\t%f\t%f\n",
+	    for (l = 0; l < num_gt_combos; ++l) {
+	      printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%.0f|%.1f|%.1f\t%f\t%f\n",
 		     chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
 		     chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
 		     chrArr[k],posArr[k],geneArr[k],rates[k][0],rates[k][1],rates[k][2],
