@@ -242,6 +242,7 @@ int main (int argc, char **argv)
   char *chrArr[num_loci];
   int posArr[num_loci];
   char *geneArr[num_loci];
+  char *rsIdArr[num_loci];
   int num_informative[num_loci];
   int *M[num_loci];
   
@@ -250,6 +251,7 @@ int main (int argc, char **argv)
   while (fgets(line, max_line, f) != NULL) {
     char *chr = strtok(line, sep);
     int pos = atoi(strtok(NULL, sep));
+    char *rsId = strtok(NULL, sep);
     char *gene = strtok(NULL, sep);
     int inf = 0;
     
@@ -262,6 +264,7 @@ int main (int argc, char **argv)
     chrArr[j] = strdup(chr);
     posArr[j] = pos;
     geneArr[j] = strdup(gene);
+    rsIdArr[j] = strdup(rsId);
 
     int *locus_gts = (int *) malloc(num_samples * sizeof(int));
     
@@ -328,7 +331,7 @@ int main (int argc, char **argv)
 		   rates[j],
 		   num_multi_informative,
 		   expected);
-
+      
       // calculate chi values for each cell and the chi_sum value for the trio
       chi_sum = 0;
       for (l = 0; l < 9; ++l) {
@@ -345,9 +348,9 @@ int main (int argc, char **argv)
 	
 	else {
 	  for (l = 0; l < 9; ++l) {
-	    printf("%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%.3f\t%.3f\t%.3f\t%02d\t%.0f|%.1f|%.1f\t%f\t%f\n",
-		   chrArr[i],posArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
-		   chrArr[j],posArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
+	    printf("%s\t%d\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%s\t%.3f\t%.3f\t%.3f\t%02d\t%.0f|%.1f|%.1f\t%f\t%f\n",
+		   chrArr[i],posArr[i],rsIdArr[j],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
+		   chrArr[j],posArr[j],rsIdArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
 		   m_gts[l],
 		   observed[l],expected[l],observed[l]-expected[l],
 		   chi[l],chi_sum);
@@ -360,6 +363,7 @@ int main (int argc, char **argv)
   for (j = 0; j < num_loci; ++j) {
     free(chrArr[j]);
     free(geneArr[j]);
+    free(rsIdArr[j]);
   }
   
   return 0;
