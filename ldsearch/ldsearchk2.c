@@ -240,10 +240,17 @@ int main (int argc, char **argv)
   // array of arrays containing genotype info for each sample
   // at each locus
   char *chrArr[num_loci];
-  int posArr[num_loci];
+  int *posArr = (int *) malloc(num_loci * sizeof(int));
+  //  int posArr[num_loci];
+
+  if (NULL == posArr) {
+    printf("there is problem\n");
+    return 0;
+  }
+
   char *geneArr[num_loci];
   char *rsIdArr[num_loci];
-  int num_informative[num_loci];
+  int *num_informative = (int *) malloc(num_loci * sizeof(int));
   int *M[num_loci];
   
   // chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
@@ -364,7 +371,11 @@ int main (int argc, char **argv)
     free(chrArr[j]);
     free(geneArr[j]);
     free(rsIdArr[j]);
+    free(rates[j]);
+    free(M[j]);
   }
-  
+  free(posArr);
+  free(sample);
+
   return 0;
 }
