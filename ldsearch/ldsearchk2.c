@@ -317,7 +317,7 @@ int main (int argc, char **argv)
 	  strcmp(chrArr[i],chrArr[k]) == 0 && abs(posArr[i] - posArr[k]) < min_distance) {
 	continue;
       }	
-	
+      
       // number of samples at are informative at all loci in k
       int num_multi_informative = 0;
       
@@ -338,7 +338,7 @@ int main (int argc, char **argv)
 	chi[l] = get_X(observed[l],expected[l], min_exp);
 	chi_sum += chi[l];
       }
-
+      
       if (chi_sum >= min_chi_sum) {
 	if (brief) {
 	  printf("%d\t%d\t%f\n",
@@ -349,7 +349,7 @@ int main (int argc, char **argv)
 	else {
 	  for (l = 0; l < 9; ++l) {
 	    printf("%s\t%d\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s\t%d\t%s\t%s\t%.3f\t%.3f\t%.3f\t%02d\t%.0f|%.1f|%.1f\t%f\t%f\n",
-		   chrArr[i],posArr[i],rsIdArr[j],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
+		   chrArr[i],posArr[i],rsIdArr[i],geneArr[i],rates[i][0],rates[i][1],rates[i][2],
 		   chrArr[j],posArr[j],rsIdArr[j],geneArr[j],rates[j][0],rates[j][1],rates[j][2],
 		   m_gts[l],
 		   observed[l],expected[l],observed[l]-expected[l],
