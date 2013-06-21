@@ -317,8 +317,7 @@ int main (int argc, char **argv)
     for (j = i + 1; j < num_loci; ++j) {
       // only calc chi-square if loci are each separated by
       // minimum distance
-      if (strcmp(chrArr[i],chrArr[j]) == 0 && abs(posArr[i] - posArr[j]) < min_distance ||
-	  strcmp(chrArr[i],chrArr[k]) == 0 && abs(posArr[i] - posArr[k]) < min_distance) {
+      if (strcmp(chrArr[i],chrArr[j]) == 0 && abs(posArr[i] - posArr[j]) < min_distance) {
 	continue;
       }	
       
