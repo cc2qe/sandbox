@@ -107,7 +107,7 @@ done" &&
 
 #echo $ALIGN_CMD
 
-#ALIGN_Q=`$QUICK_Q -d $NODE -t 2 -m 5000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE -W depend=afterok:$MOVE_FILES_Q` &&
+ALIGN_Q=`$QUICK_Q -d $NODE -t 2 -m 5000mb -n bwa_${SAMPLE}_${NODE} -c " $ALIGN_CMD " -q $QUEUE ` &&
 
 
 # ---------------------
@@ -135,7 +135,7 @@ done" &&
 # echo $SORT_CMD
 #SORT_CMD="echo SORT_CMD"
 
-SORT_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE` &&
+SORT_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"` &&
 
 
 # ---------------------

@@ -135,7 +135,7 @@ done" &&
 # echo $SORT_CMD
 #SORT_CMD="echo SORT_CMD"
 
-SORT_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE` &&
+#SORT_Q=`$QUICK_Q -m 4gb -d $NODE -t 1 -n sort_${SAMPLE}_${NODE} -c " $SORT_CMD " -q $QUEUE -z "-W depend=afterok:$ALIGN_Q"` &&
 
 
 # ---------------------
@@ -213,7 +213,7 @@ done" &&
 
 #GATK_CMD="echo GATK_CMD"
 
-GATK_Q=`$QUICK_Q -m 7800mb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -W depend=afterok:$SORT_Q` &&
+#GATK_Q=`$QUICK_Q -m 7800mb -d $NODE -t 3 -n gatk_${SAMPLE}_${NODE} -c " $GATK_CMD " -q $QUEUE -W depend=afterok:$SORT_Q` &&
 
 
 
@@ -235,7 +235,7 @@ done" &&
 
 #CALMD_CMD="echo calmd_cmd"
 
-CALMD_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n calmd_${SAMPLE}_${NODE} -c " $CALMD_CMD " -q $QUEUE -W depend=afterok:$GATK_Q` &&
+CALMD_Q=`$QUICK_Q -m 1gb -d $NODE -t 1 -n calmd_${SAMPLE}_${NODE} -c " $CALMD_CMD " -q $QUEUE ` &&
 
 
 
