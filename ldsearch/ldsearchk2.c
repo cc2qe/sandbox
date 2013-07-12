@@ -241,13 +241,9 @@ int main (int argc, char **argv)
   // at each locus
   char **chrArr = (char **) malloc(num_loci * sizeof(char*));
   int *posArr = (int *) malloc(num_loci * sizeof(int));
-  //  int posArr[num_loci];
-  //  char *geneArr[num_loci];
   char **geneArr = (char **) malloc(num_loci * sizeof(char*));
-  //  char *rsIdArr[num_loci];
   char ** rsIdArr = (char **) malloc(num_loci * sizeof(char*));
   int *num_informative = (int *) malloc(num_loci * sizeof(int));
-  //  int *M[num_loci];
   int **M = (int **) malloc(num_loci * sizeof(int*));
   
   // chr1  69510 OR4F5 0.65  0.64  0.32  0.87  0.69  2
