@@ -3,6 +3,7 @@
 import argparse, sys
 from argparse import RawTextHelpFormatter
 import numpy as np
+import operator
 
 __author__ = "Author (email@site.com)"
 __version__ = "$Revision: 0.0.1 $"
@@ -37,7 +38,63 @@ description: Basic python script template")
     return args
 
 # primary function
+def read(file):
+    frame = list()
+    
+    for line in file:
+        v = line.rstrip().split('\t')
+        v[4:7] = map(float,v[4:7])
+        v[11:14] = map(float,v[11:14])
+        frame.append(v)
+
+    return frame
+
+# switches alleles so that 0 is maj and 2 is min
+def majMin(myFrame):
+    for i in range(len(myFrame)):
+        pair = myFrame[i]
+
+        if pair[4] < pair[6]:
+            #print pair
+            gt = pair[14][0]
+            minFreq = pair[4]
+            majFreq = pair[6]
+            newGt = str
+            if gt == '0':
+                newGt = '2'
+            elif gt == '2':
+                newGt = '0'
+            else: newGt = gt
+
+            pair[14] = newGt + pair[14][1]
+            pair[4] = majFreq
+            pair[6] = minFreq
+
+        if pair[13] > pair[11]:
+            gt = pair[14][1]
+            minFreq = pair[11]
+            majFreq = pair[13]
+            newGt = str
+            if gt == '0':
+                newGt = '2'
+            elif gt == '2':
+                newGt = '0'
+            else: newGt = gt
+
+            pair [14] = pair[14][0] + newGt
+            pair[11] = majFreq
+            pair[13] = minFreq
+
+
+        myFrame[i] = pair
+    myFrame = sorted(myFrame, key=operator.itemgetter(14))
+
+    return myFrame
+
 def block(file):
+    frame = read(file)
+    frame = majMin(frame)
+    
     prevGt = -1
     obs = list()
     exp = list()
@@ -50,8 +107,7 @@ def block(file):
 
     # print header
     print '\t'.join(("# gt", "mean", "stdev", "numPairs", "meanObs", "meanExp", "meanRef1", "meanRef2"))
-    for line in file:
-        v = line.rstrip().split('\t')
+    for v in frame:
         gt = v[14]
 
         if gt != prevGt and prevGt != -1:
@@ -70,7 +126,7 @@ def block(file):
             for i in range(len(ref1)):
                 refMaj1.append( ref1[i] - alt1[i] )
                 refMaj2.append( ref2[i] - alt2[i] )
-                    
+
                 # omitArr = diffs[0:i] + diffs[i+1:len(diffs)]
                 # print(np.std(omitArr))
             print '%s\t%.2f\t%.2f\t%s\t%.2f\t%.2f\t%.2f\t%.2f' % (prevGt,np.mean(diffs),np.std(diffs),len(diffs),np.mean(obs),np.mean(exp),np.mean(refMaj1),np.mean(refMaj2))
@@ -82,7 +138,7 @@ def block(file):
             alt1 = list()
             ref2 = list()
             alt2 = list()
-        
+
         # print line.rstrip()
         counts = v[15].split('|')
         # difference between observed and expected
@@ -94,9 +150,9 @@ def block(file):
         alt1.append(float(v[6]))
         ref2.append(float(v[11]))
         alt2.append(float(v[13]))
-        
+
         prevGt = gt
-    
+
     for d in diffs:
         if abs(d - np.mean(diffs) > 10):
             index = diffs.index(d)
@@ -107,7 +163,7 @@ def block(file):
             alt1.pop(index)
             ref2.pop(index)
             alt2.pop(index)
-            
+
         for i in range(len(ref1)):
             refMaj1.append( ref1[i] - alt1[i] )
             refMaj2.append( ref2[i] - alt2[i] )
@@ -115,7 +171,10 @@ def block(file):
             # omitArr = diffs[0:i] + diffs[i+1:len(diffs)]
             # print(np.std(omitArr))
     print '%s\t%.2f\t%.2f\t%s\t%.2f\t%.2f\t%.2f\t%.2f' % (prevGt,np.mean(diffs),np.std(diffs),len(diffs),np.mean(obs),np.mean(exp),np.mean(refMaj1),np.mean(refMaj2))
+
+
     return
+
 
 # --------------------------------------
 # main function
