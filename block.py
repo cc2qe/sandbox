@@ -21,6 +21,7 @@ description: Basic python script template")
     #    parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
     #parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
     #parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
+    parser.add_argument('-d', '--maxDiff', type=int, required=False, default=10, help='max deviation from expected to include')
     parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='file to read. If \'-\' or absent then defaults to stdin.')
 
     # parse the arguments
@@ -91,7 +92,7 @@ def majMin(myFrame):
 
     return myFrame
 
-def block(file):
+def block(file, maxDiff):
     frame = read(file)
     frame = majMin(frame)
     
@@ -112,7 +113,7 @@ def block(file):
 
         if gt != prevGt and prevGt != -1:
             for d in diffs:
-                if abs(d - np.mean(diffs) > 10):
+                if abs(d - np.mean(diffs) > maxDiff):
                     index = diffs.index(d)
                     diffs.remove(d)
                     obs.pop(index)
@@ -154,7 +155,7 @@ def block(file):
         prevGt = gt
 
     for d in diffs:
-        if abs(d - np.mean(diffs) > 10):
+        if abs(d - np.mean(diffs) > maxDiff):
             index = diffs.index(d)
             diffs.remove(d)
             obs.pop(index)
@@ -185,9 +186,10 @@ def main():
 
     # store into global values
     file = args.input
+    maxDiff = args.maxDiff
     
     # call primary function
-    block(file)
+    block(file, maxDiff)
 
     # close the input file
     file.close()
