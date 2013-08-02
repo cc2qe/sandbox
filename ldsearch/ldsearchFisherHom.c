@@ -328,8 +328,13 @@ int main (int argc, char **argv)
   
   int k,l;
   double observed[4];
+
+  // make sure that it won't blow through all the loci available
+  int end_i = start_i + block_size;
+  if (end_i > num_loci)
+    end_i = num_loci;
   
-  for (i = start_i; i < start_i + block_size; ++i) {
+  for (i = start_i; i < end_i; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       // only calc chi-square if loci are each separated by
       // minimum distance
