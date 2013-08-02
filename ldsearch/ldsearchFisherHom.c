@@ -157,6 +157,8 @@ int usage()
 	  "                           (currently 2 no matter what you put, sucka)\n"
 	  "  -d MIN_DISTANCE        minimum distance between loci\n"
 	  "  -p MAX_LOG_P           maximum log p-value to print (default: 0)\n"
+	  "  -i START_I             for parallelizing: the starting i value to iterate on\n"
+	  "  -z BLOCK_SIZE          for parallelizing: the number of loci to iterate through\n"
 	  "  -b                     brief but faster output\n"
 	  "\n"
 	  );
@@ -173,12 +175,14 @@ int main (int argc, char **argv)
   int brief = 0;
   char *file_name;
   char *samples_file_name;
+  int start_i = 0;
+  int block_size = -1;
 
   int i;
   int c;
   opterr = 0;
 
-  while ((c = getopt(argc, argv, "hd:s:l:k:p:e:b")) != -1) {
+  while ((c = getopt(argc, argv, "hd:s:l:k:p:e:i:z:b")) != -1) {
     switch (c) {
     case 'h':
       return usage();
@@ -196,6 +200,12 @@ int main (int argc, char **argv)
       break;
     case 'p':
       max_log_p = atoi(optarg);
+      break;
+    case 'i':
+      start_i = atoi(optarg);
+      break;
+    case 'z':
+      block_size = atoi(optarg);
       break;
     case 'b':
       brief = 1;
@@ -221,6 +231,10 @@ int main (int argc, char **argv)
     return usage();
   }
   
+  // if the user didn't specify a block size then just make it the entire file
+  if (block_size == -1)
+    block_size = num_loci;
+
   // the maximum chars per line of file to read in. (should be more than double the number of samples)
   int max_line = 10000;
   char *sep = "\t";
@@ -315,7 +329,7 @@ int main (int argc, char **argv)
   int k,l;
   double observed[4];
   
-  for (i = 0; i < num_loci; ++i) {
+  for (i = start_i; i < start_i + block_size; ++i) {
     for (j = i + 1; j < num_loci; ++j) {
       // only calc chi-square if loci are each separated by
       // minimum distance
