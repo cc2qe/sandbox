@@ -49,13 +49,16 @@ def fixBim(bimFile, refFile):
         refBase = refV[0]
 
         # if neither of the alleles match the reference
-        # genome there is problem.
+        # genome there is problem. Print it anyway so we don't
+        # mess up the plink-seq import, but kick an error and 
+        # remember to remove it later.
         if refBase != alleleA and refBase != alleleB:
             sys.stderr.write("Ref base doesn't match allele (ref: %s)\n%s" % (refV[0], bimLine))
-
-        if alleleA == refBase:
             print bimLine.rstrip()
-        if alleleB == refBase:
+
+        elif alleleA == refBase:
+            print bimLine.rstrip()
+        elif alleleB == refBase:
             print '\t'.join(map(str,(bimV[0], bimV[1], bimV[2], bimV[3], bimV[5], bimV[4])))
 
     return
