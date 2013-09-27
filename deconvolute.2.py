@@ -43,12 +43,42 @@ def decon(log_ratio, ma_frac):
     # let R be the list of possible copy number ratios. These
     # fractions are rational numbers based on the assumption of
     # integer number of chromosomes
-    R = [0.5, 3/2.0, 4/2.0]
+    R = [0.5, 3/2.0, 4/2.0, 4/2.0]
 
     # let S be the list of possible minor allele fractions. These
     # fractions are rational numbers based on the assumption of
     # integer number of chromosomes
-    S = [0, 1/3.0, 1/4.0]
+    S = [0, 1/3.0, 1/4.0, 2/4.0]
+
+    # now we'll assume that the tumor population is comprised of a subpopulation of normal
+    # and a subpopulation of mutant cells. So we'll solve a system of equations where
+    # subpop1 + subpop2 = 1 and raw_ratio = 0.5 * subpop1 + t * subpop2 where t is in s.
+
+    # # First try. This matches for CN and ma_frac but doesn't require the populations to
+    # # sum to 1.
+    # for i in range(len(R)):
+    #     r = R[i]
+    #     s = S[i]
+    #     
+    #     A = np.matrix([[1, r],[0.5, s]])
+    #     b = np.matrix([[raw_ratio],[ma_frac]])
+    # 
+    #     x = np.linalg.solve(A,b)
+    # 
+    #     for m in range(x.shape[0]):
+    #         for n in range(x.shape[1]):
+    #             if x[m,n] < 0:
+    #                 x[m,n] = 0
+    #             elif x[m,n] > 1:
+    #                 x[m,n] = 1
+    # 
+    #     x[0,0]*0.5 + x[1,0]*s
+    # 
+    #     if abs(1-sum(x)) < 0.1:
+    #         print 's = %s' % s
+    #         print x[0,0], x[1,0]
+    #         print 'sum is %s' % sum(x)
+
 
     print "\nnew line with %s %s" % (raw_ratio, ma_frac)
     copy_resids = [0]*len(R)
@@ -57,13 +87,10 @@ def decon(log_ratio, ma_frac):
     for i in range(len(R)):
         r = R[i]
         s = S[i]
-        print r,s
 
-        alpha = 0
-        beta = 1
-
-        A = np.matrix([[alpha*1 + beta*0.5,alpha*r + beta*s],[1,1]])
-        b = np.matrix([[alpha*raw_ratio + beta*ma_frac],[1]])
+        # first calculate based on the copy number ratio
+        A = np.matrix([[1,r],[1,1]])
+        b = np.matrix([[raw_ratio],[1]])
 
         x = np.linalg.solve(A,b)
 
@@ -74,12 +101,24 @@ def decon(log_ratio, ma_frac):
                 elif x[m,n] > 1:
                     x[m,n] = 1
 
-        # print "s is %s, p1=%s, p2=%s" % (s, x[0,0], x[1,0])
+        # then calculate based on the minor allele fraction
+        A = np.matrix([[0.5,s],[1,1]])
+        b = np.matrix([[ma_frac],[1]])
+
+        y = np.linalg.solve(A,b)
+        for m in range(y.shape[0]):
+            for n in range(y.shape[1]):
+                if y[m,n] < 0:
+                    y[m,n] = 0
+                elif y[m,n] > 1:
+                    y[m,n] = 1
+
+        print "s is %s, p1=%s, p2=%s" % (s, x[0,0], x[1,0])
         m_ratio = x[0,0]*1 + x[1,0]*r
-        # print m_ratio, raw_ratio, m_ratio - raw_ratio
+        print m_ratio, raw_ratio, m_ratio - raw_ratio
 
         m_ma_frac = x[0,0]*0.5 + x[1,0]*s
-        # print m_ma_frac, ma_frac, m_ma_frac - ma_frac
+        print m_ma_frac, ma_frac, m_ma_frac - ma_frac
 
         copy_resids[i] = abs(m_ratio - raw_ratio)
         ma_frac_resids[i] = abs(m_ma_frac - ma_frac)
@@ -87,8 +126,8 @@ def decon(log_ratio, ma_frac):
 
     # b = copy_resids.index(min(copy_resids))
     # print copy_resids
-    b = copy_resids.index(min(copy_resids))
-    print copy_resids
+    b = ma_frac_resids.index(min(ma_frac_resids))
+    print ma_frac_resids
     
     x = sols[b]
     s = S[b]
