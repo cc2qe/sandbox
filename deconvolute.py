@@ -13,10 +13,11 @@ __date__ = "$Date: 2013-05-09 14:31 $"
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
-pythonTemplate.py\n\
+deconvolute.py\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
-description: Basic python script template")
+description: separate heterogenous tumor sample into subpopulations")
+    parser.add_argument('-m', '--method', nargs=1, type=str, choices=['allele', 'copy', 'hybrid'], default='allele', help='method to run')
     parser.add_argument('segfile', nargs='?', type=argparse.FileType('r'), default=None, help='segmentation file. If \'-\' or absent then defaults to stdin.')
 
     # parse the arguments
@@ -34,7 +35,7 @@ description: Basic python script template")
     return args
 
 # primary function
-def decon(seg_file):
+def decon(method, seg_file):
     # print the output header
     print '\t'.join(('# chrom', 'start', 'end', 'seg_id', 'copy_count', 'r', 's', 'pop1', 'pop2', 'copy_ratio', 'y_copy_ratio', 'min_frac', 'y_min_frac'))
 
@@ -151,7 +152,7 @@ def main():
     seg_file = args.segfile
     
     # call primary function
-    decon(seg_file)
+    decon(args.method, seg_file)
 
     # close the input file
     seg_file.close()
@@ -159,10 +160,3 @@ def main():
 # initialize the script
 if __name__ == '__main__':
     sys.exit(main())
-
-
-
-
-
-
-
