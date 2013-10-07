@@ -127,17 +127,25 @@ def decon(method, seg_file):
         x_best = x_min_frac_resids.index(min(x_min_frac_resids))
         y_best = y_copy_resids.index(min(y_copy_resids))
 
-
-        y = y_sols[y_best]
-        s = S[y_best]
-        r = R[y_best]
-        y_copy_ratio = y[0,0]*1 + y[1,0]*r
-        y_min_frac = y[0,0]*0.5 + y[1,0]*s
-
         # just for the output string, to convert y_best to number of copies
         copy_count = [1,3,4]
 
-        print '\t'.join(map(str, (chrom, start, end, seg_id, copy_count[y_best], r, "%.3f" % s, "%.3f" % y[0,0], "%.3f" % y[1,0], "%.3f" % copy_ratio, "%.3f" % y_copy_ratio, "%.3f" % min_frac, "%.3f" % y_min_frac)))
+        if method == 'allele':
+            # the best calculations for the allele method
+            y = y_sols[y_best]
+            s = S[y_best]
+            r = R[y_best]
+            y_copy_ratio = y[0,0]*1 + y[1,0]*r
+            y_min_frac = y[0,0]*0.5 + y[1,0]*s
+            print '\t'.join(map(str, (chrom, start, end, seg_id, copy_count[y_best], r, "%.3f" % s, "%.3f" % y[0,0], "%.3f" % y[1,0], "%.3f" % copy_ratio, "%.3f" % y_copy_ratio, "%.3f" % min_frac, "%.3f" % y_min_frac)))
+        elif method == 'copy':
+            # the best calculations for the copy number method
+            x = x_sols[x_best]
+            s = S[x_best]
+            r = R[x_best]
+            x_copy_ratio = x[0,0]*1 + x[1,0]*r
+            x_min_frac = x[0,0]*0.5 + x[1,0]*s
+            print '\t'.join(map(str, (chrom, start, end, seg_id, copy_count[x_best], r, "%.3f" % s, "%.3f" % x[0,0], "%.3f" % x[1,0], "%.3f" % copy_ratio, "%.3f" % x_copy_ratio, "%.3f" % min_frac, "%.3f" % x_min_frac)))
     
     return
 
@@ -152,7 +160,7 @@ def main():
     seg_file = args.segfile
     
     # call primary function
-    decon(args.method, seg_file)
+    decon(args.method[0], seg_file)
 
     # close the input file
     seg_file.close()
