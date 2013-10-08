@@ -18,6 +18,8 @@ author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: separate heterogenous tumor sample into subpopulations")
     parser.add_argument('-m', '--method', nargs=1, type=str, choices=['allele', 'copy', 'hybrid'], default='allele', help='method to run')
+    parser.add_argument('-a', '--alpha', type=float, default=1, help='weight for copy number statistic (only applies to hybrid method, default: 1)')
+    parser.add_argument('-b', '--beta', type=float, default=1, help='weight for allele statistic (only applies to hybrid method, default: 1)')
     parser.add_argument('segfile', nargs='?', type=argparse.FileType('r'), default=None, help='segmentation file. If \'-\' or absent then defaults to stdin.')
 
     # parse the arguments
@@ -35,7 +37,7 @@ description: separate heterogenous tumor sample into subpopulations")
     return args
 
 # primary function
-def decon(method, seg_file):
+def decon(method, seg_file, argAlpha, argBeta):
     # print the output header
     print '\t'.join(('# chrom', 'start', 'end', 'seg_id', 'copy_count', 'r', 's', 'pop1', 'pop2', 'copy_ratio', 'y_copy_ratio', 'min_frac', 'y_min_frac'))
 
@@ -175,15 +177,18 @@ def decon(method, seg_file):
             # let R be the list of aberrant copy number ratios. These
             # fractions are rational numbers based on the assumption of
             # integer number of chromosomes
-            R = [0.5, 1, 3/2.0, 4/2.0, 4/2.0, 5/2.0, 5/2.0]
+            R = [1/2.0, 2/2.0, 3/2.0, 4/2.0, 4/2.0, 5/2.0, 5/2.0, 6/2.0, 6/2.0, 6/2.0]
+            # R = [1/2.0, 2/2.0, 3/2.0, 3/2.0, 4/2.0, 4/2.0, 4/2.0, 5/2.0, 5/2.0, 5/2.0, 6/2.0, 6/2.0, 6/2.0, 6/2.0]
 
             # let S be the list of aberrant minor allele fractions. These
             # fractions are rational numbers based on the assumption of
             # integer number of chromosomes
-            S = [0, 0, 1/3.0, 1/4.0, 1/2.0, 1/5.0, 2/5.0]
+            S = [0/1.0, 0/2.0, 1/3.0, 1/4.0, 2/4.0, 1/5.0, 2/5.0, 1/6.0, 2/6.0, 3/6.0]
+            # S = [0/1.0, 0/2.0, 0.03/3.0, 1/3.0, 0/4.0, 1/4.0, 2/4.0, 0/5.0, 1/5.0, 2/5.0, 0/6.0, 1/6.0, 2/6.0, 3/6.0]
 
             # just for the output string, to convert y_best to number of copies
-            copy_count = [1,2,3,4,4,5,5]
+            copy_count = [1,2,3,4,4,5,5,6,6,6]
+            # copy_count = [1,2,3,3,4,4,4,5,5,5,6,6,6,6]
 
             # make blank matrices for the residuals
             z_copy_resids = [0]*len(R)
@@ -196,8 +201,8 @@ def decon(method, seg_file):
                 r = R[i]
                 s = S[i]
                 # Solve based on combo
-                alpha = 1
-                beta = 1
+                alpha = argAlpha
+                beta = argBeta
                 
                 # A * y = B, solve for y.
                 A = np.matrix([[alpha*1 + beta*0.5 ,alpha*r + beta*s],[1,1]])
@@ -247,7 +252,7 @@ def main():
     seg_file = args.segfile
     
     # call primary function
-    decon(args.method[0], seg_file)
+    decon(args.method[0], seg_file, args.alpha, args.beta)
 
     # close the input file
     seg_file.close()
