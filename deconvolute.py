@@ -41,7 +41,7 @@ def decon(method, seg_file, argAlpha, argBeta):
     # print the output header
     print '\t'.join(('# chrom', 'start', 'end', 'seg_id', 'copy_count', 'r', 's', 'pop1', 'pop2', 'copy_ratio', 'y_copy_ratio', 'min_frac', 'y_min_frac'))
     
-    het = 0.45
+    het = 0.4385457
     
     # parse the file (tab delimited)
     # chrom, start, end, id, num_probes, log2copyratio, maj_allele_reads, min_allele_reads, min_allel_fraction
