@@ -40,7 +40,9 @@ description: separate heterogenous tumor sample into subpopulations")
 def decon(method, seg_file, argAlpha, argBeta):
     # print the output header
     print '\t'.join(('# chrom', 'start', 'end', 'seg_id', 'copy_count', 'r', 's', 'pop1', 'pop2', 'copy_ratio', 'y_copy_ratio', 'min_frac', 'y_min_frac'))
-
+    
+    het = 0.45
+    
     # parse the file (tab delimited)
     # chrom, start, end, id, num_probes, log2copyratio, maj_allele_reads, min_allele_reads, min_allel_fraction
     # 1 3218610 42108999 1 20226 -0.2905 34476 53299 0.432432
@@ -82,7 +84,7 @@ def decon(method, seg_file, argAlpha, argBeta):
                 beta = 0
 
                 # A * x = B, solve for x.
-                A = np.matrix([[alpha*1 + beta*0.5 ,alpha*r + beta*s],[1,1]])
+                A = np.matrix([[alpha*1 + beta*het ,alpha*r + beta*s],[1,1]])
                 B = np.matrix([[alpha*copy_ratio + beta*min_frac],[1]])
                 x = np.linalg.solve(A,B)
 
@@ -97,7 +99,7 @@ def decon(method, seg_file, argAlpha, argBeta):
                 # Now we have copy number solutions (x) and minor allele fraction solutions (y)
                 # Calculate the residuals off the other metric for each
                 x_copy_ratio = x[0,0]*1 + x[1,0]*r
-                x_min_frac = x[0,0]*0.5 + x[1,0]*s
+                x_min_frac = x[0,0]*het + x[1,0]*s
                 x_copy_resids[i] = abs(x_copy_ratio - copy_ratio)    # this should always be zero
                 x_min_frac_resids[i] = abs(x_min_frac - min_frac)
                 x_sols[i] = x
@@ -110,7 +112,7 @@ def decon(method, seg_file, argAlpha, argBeta):
             s = S[x_best]
             r = R[x_best]
             x_copy_ratio = x[0,0]*1 + x[1,0]*r
-            x_min_frac = x[0,0]*0.5 + x[1,0]*s
+            x_min_frac = x[0,0]*het + x[1,0]*s
             print '\t'.join(map(str, (chrom, start, end, seg_id, copy_count[x_best], r, "%.3f" % s, "%.3f" % x[0,0], "%.3f" % x[1,0], "%.3f" % copy_ratio, "%.3f" % x_copy_ratio, "%.3f" % min_frac, "%.3f" % x_min_frac)))
             
         elif method == 'allele':
@@ -142,7 +144,7 @@ def decon(method, seg_file, argAlpha, argBeta):
                 beta = 1
 
                 # A * y = B, solve for y.
-                A = np.matrix([[alpha*1 + beta*0.5 ,alpha*r + beta*s],[1,1]])
+                A = np.matrix([[alpha*1 + beta*het ,alpha*r + beta*s],[1,1]])
                 B = np.matrix([[alpha*copy_ratio + beta*min_frac],[1]])
                 y = np.linalg.solve(A,B)
 
@@ -157,7 +159,7 @@ def decon(method, seg_file, argAlpha, argBeta):
                 # Now we have copy number solutions (x) and minor allele fraction solutions (y)
                 # Calculate the residuals off the other metric for each
                 y_copy_ratio = y[0,0]*1 + y[1,0]*r
-                y_min_frac = y[0,0]*0.5 + y[1,0]*s
+                y_min_frac = y[0,0]*het + y[1,0]*s
                 y_copy_resids[i] = abs(y_copy_ratio - copy_ratio)
                 y_min_frac_resids[i] = abs(y_min_frac - min_frac)    # this should always be zero
                 y_sols[i] = y
@@ -170,24 +172,27 @@ def decon(method, seg_file, argAlpha, argBeta):
             s = S[y_best]
             r = R[y_best]
             y_copy_ratio = y[0,0]*1 + y[1,0]*r
-            y_min_frac = y[0,0]*0.5 + y[1,0]*s
+            y_min_frac = y[0,0]*het + y[1,0]*s
             print '\t'.join(map(str, (chrom, start, end, seg_id, copy_count[y_best], r, "%.3f" % s, "%.3f" % y[0,0], "%.3f" % y[1,0], "%.3f" % copy_ratio, "%.3f" % y_copy_ratio, "%.3f" % min_frac, "%.3f" % y_min_frac)))
         
         elif method == 'hybrid':
             # let R be the list of aberrant copy number ratios. These
             # fractions are rational numbers based on the assumption of
             # integer number of chromosomes
-            R = [1/2.0, 2/2.0, 3/2.0, 4/2.0, 4/2.0, 5/2.0, 5/2.0, 6/2.0, 6/2.0, 6/2.0]
+            R = [1/2.0, 2/2.0, 3/2.0, 4/2.0, 4/2.0, 5/2.0, 5/2.0] # max chroms: 5
+            # R = [1/2.0, 2/2.0, 3/2.0, 4/2.0, 4/2.0, 5/2.0, 5/2.0, 6/2.0, 6/2.0, 6/2.0]
             # R = [1/2.0, 2/2.0, 3/2.0, 3/2.0, 4/2.0, 4/2.0, 4/2.0, 5/2.0, 5/2.0, 5/2.0, 6/2.0, 6/2.0, 6/2.0, 6/2.0]
 
             # let S be the list of aberrant minor allele fractions. These
             # fractions are rational numbers based on the assumption of
             # integer number of chromosomes
-            S = [0/1.0, 0/2.0, 1/3.0, 1/4.0, 2/4.0, 1/5.0, 2/5.0, 1/6.0, 2/6.0, 3/6.0]
+            S = [0/1.0, 0/2.0, 1/3.0, 1/4.0, 2/4.0, 1/5.0, 2/5.0] # max chroms: 5
+            # S = [0/1.0, 0/2.0, 1/3.0, 1/4.0, 2/4.0, 1/5.0, 2/5.0, 1/6.0, 2/6.0, 3/6.0]
             # S = [0/1.0, 0/2.0, 0.03/3.0, 1/3.0, 0/4.0, 1/4.0, 2/4.0, 0/5.0, 1/5.0, 2/5.0, 0/6.0, 1/6.0, 2/6.0, 3/6.0]
 
             # just for the output string, to convert y_best to number of copies
-            copy_count = [1,2,3,4,4,5,5,6,6,6]
+            copy_count = [1,2,3,4,4,5,5] # max chroms: 5
+            # copy_count = [1,2,3,4,4,5,5,6,6,6]
             # copy_count = [1,2,3,3,4,4,4,5,5,5,6,6,6,6]
 
             # make blank matrices for the residuals
@@ -204,8 +209,8 @@ def decon(method, seg_file, argAlpha, argBeta):
                 alpha = argAlpha
                 beta = argBeta
                 
-                # A * y = B, solve for y.
-                A = np.matrix([[alpha*1 + beta*0.5 ,alpha*r + beta*s],[1,1]])
+                # A * y = B, solve for z.
+                A = np.matrix([[alpha*1 + beta*het ,alpha*r + beta*s],[1,1]])
                 B = np.matrix([[alpha*copy_ratio + beta*min_frac],[1]])
                 z = np.linalg.solve(A,B)
                 
@@ -220,13 +225,11 @@ def decon(method, seg_file, argAlpha, argBeta):
                 # Now we have copy number solutions and minor allele fraction solutions
                 # Calculate the residuals off the other metric for each
                 z_copy_ratio = z[0,0]*1 + z[1,0]*r
-                z_min_frac = z[0,0]*0.5 + z[1,0]*s
+                z_min_frac = z[0,0]*het + z[1,0]*s
                 z_copy_resids[i] = abs(z_copy_ratio - copy_ratio)
                 z_min_frac_resids[i] = abs(z_min_frac - min_frac)
-                z_combo_resids[i] = z_copy_resids[i] + z_min_frac_resids[i]
+                z_combo_resids[i] = z_copy_resids[i] + z_min_frac_resids[i] # do I need to multiply these by alpha and beta????
                 z_sols[i] = z
-
-                # print '\t'.join(map(str, (chrom, start, end, seg_id, copy_count[i], r, "%.3f" % s, "%.3f" % z[0,0], "%.3f" % z[1,0], "%.3f" % copy_ratio, "%.3f" % z_copy_ratio, "%.3f" % min_frac, "%.3f" % z_min_frac)))
 
             # now we have the copy number and allele solutions. determine the best one
             z_best = z_combo_resids.index(min(z_combo_resids))
@@ -236,7 +239,7 @@ def decon(method, seg_file, argAlpha, argBeta):
             s = S[z_best]
             r = R[z_best]
             z_copy_ratio = z[0,0]*1 + z[1,0]*r
-            z_min_frac = z[0,0]*0.5 + z[1,0]*s
+            z_min_frac = z[0,0]*het + z[1,0]*s
             print '\t'.join(map(str, (chrom, start, end, seg_id, copy_count[z_best], r, "%.3f" % s, "%.3f" % z[0,0], "%.3f" % z[1,0], "%.3f" % copy_ratio, "%.3f" % z_copy_ratio, "%.3f" % min_frac, "%.3f" % z_min_frac)))      
     
     return
