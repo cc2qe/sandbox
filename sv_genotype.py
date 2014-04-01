@@ -62,7 +62,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, bam, splitters, disc
             #print ref_read.pos, ref_read.pos + ref_read.inferred_length, ref_read.aend
             if not ref_read.is_duplicate and posA - ref_read.pos >= flank and ref_read.aend - posA >= flank:
                 ref_counter += 1
-        print '\t'.join(map(str, (chromA, posA, ref_counter, split_counter[posA], 'A', sv_id)))
+        print '\t'.join(map(str, (chromA, posA, ref_counter, split_counter[posA], 'spl_A', sv_id)))
 
     
     # now do the same over regionB
@@ -73,7 +73,6 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, bam, splitters, disc
         if split_read.cigar[-1][0] == 0: # and split_read.pnext > startB - readlength:
             split_counter[split_read.positions[-1] - split_read.cigar[-1][1] + 1] += 1
 
-
     # maybe use AlignedRead.positions to get the overlap.
     # or AlignedRead.overlap
     for posB in range(startB, endB + 1):
@@ -82,10 +81,57 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, bam, splitters, disc
         for ref_read in bam.fetch(chromB, posB - 1, posB):
             if not ref_read.is_duplicate and posB - ref_read.pos >= flank and ref_read.aend - posB >= flank:
                 ref_counter += 1
-        print '\t'.join(map(str, (chromB, posB, ref_counter, split_counter[posB], 'B', sv_id)))
+        print '\t'.join(map(str, (chromB, posB, ref_counter, split_counter[posB], 'spl_B', sv_id)))
 
     #for split_read in splitters.fetch(break_chrom, break_pos - 1, break_pos):
     #    print split_read.pos + split_read.inferred_length
+
+    # now do the spanning coverage over region A
+    mean_ospan = 300
+    sd_ospan = 80
+    z = 6
+
+    disc_span_counter = Counter()
+    for disc_read in discordants.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + 1 + (mean_ospan + sd_ospan * z)):
+        if not disc_read.is_duplicate and not disc_read.is_reverse and not disc_read.is_secondary and disc_read.pnext >= startB and disc_read.pnext < endB + 1 + (mean_ospan + sd_ospan * z):
+            for posA in range(disc_read.positions[-1], disc_read.pnext):
+                disc_span_counter[posA] += 1
+
+    ref_span_counter = Counter()
+    for ref_read in bam.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + (mean_ospan + sd_ospan * z) + 1):
+        if not ref_read.is_duplicate and ref_read.is_proper_pair and not ref_read.is_secondary and not ref_read.is_reverse and ref_read.pnext - (ref_read.positions[-1] + 1) > 0:
+            #print ref_read
+            #print ref_read.positions[-1], ref_read.pnext, ref_read.pnext - (ref_read.positions[-1] + 1), ref_read.tlen
+            for posA in range(ref_read.positions[-1], ref_read.pnext):
+                ref_span_counter[posA] +=1
+    for posA in range(startA, endA + 1):
+        print '\t'.join(map(str, (chromA, posA, ref_span_counter[posA], disc_span_counter[posA], 'disc_A', sv_id)))
+    
+    # do the same over region B
+    disc_span_counter = Counter()
+    for disc_read in discordants.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z)):
+        # NOTE: below only works for deletions
+        if not disc_read.is_duplicate and disc_read.is_reverse and not disc_read.is_secondary and disc_read.pnext + 100 < endA + 1:
+            #print disc_read
+            for posB in range(disc_read.pnext + readlength, disc_read.positions[0]):
+                disc_span_counter[posB] += 1
+
+    # print disc_span_counter
+
+    ref_span_counter = Counter()
+    for ref_read in bam.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z) + 1):
+        # NOTE: BELOW ONLY WORKS FOR DELETIONS, NOT WEIRDLY ORIENTED STUFF
+        if not ref_read.is_duplicate and ref_read.is_proper_pair and not ref_read.is_secondary and ref_read.is_reverse and ref_read.pnext + readlength - (ref_read.positions[0] + 1) < 0:
+            #print ref_read
+            #print ref_read.pnext + readlength, ref_read.positions[0]
+            for posB in range(ref_read.pnext + readlength, ref_read.positions[0]):
+                #print posB
+                ref_span_counter[posB] +=1
+    for posB in range(startB, endB + 1):
+        print '\t'.join(map(str, (chromB, posB, ref_span_counter[posB], disc_span_counter[posB], 'disc_B', sv_id)))
+
+
+
 
 def calc_somthing(blocklist):
     print blocklist
