@@ -62,7 +62,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, bam, splitters, disc
             #print ref_read.pos, ref_read.pos + ref_read.inferred_length, ref_read.aend
             if not ref_read.is_duplicate and posA - ref_read.pos >= flank and ref_read.aend - posA >= flank:
                 ref_counter += 1
-        print '\t'.join(map(str, (chromA, posA, ref_counter, split_counter[posA], 'spl_A', sv_id)))
+        #############print '\t'.join(map(str, (chromA, posA, ref_counter, split_counter[posA], 'spl_A', sv_id)))
 
     
     # now do the same over regionB
@@ -81,15 +81,18 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, bam, splitters, disc
         for ref_read in bam.fetch(chromB, posB - 1, posB):
             if not ref_read.is_duplicate and posB - ref_read.pos >= flank and ref_read.aend - posB >= flank:
                 ref_counter += 1
-        print '\t'.join(map(str, (chromB, posB, ref_counter, split_counter[posB], 'spl_B', sv_id)))
+        ###########print '\t'.join(map(str, (chromB, posB, ref_counter, split_counter[posB], 'spl_B', sv_id)))
 
     #for split_read in splitters.fetch(break_chrom, break_pos - 1, break_pos):
     #    print split_read.pos + split_read.inferred_length
 
     # now do the spanning coverage over region A
-    mean_ospan = 300
+    mean_ispan = 219
+    sd_ispan = 80
+    mean_ospan = mean_ispan + 2 * readlength
     sd_ospan = 80
-    z = 6
+
+    z = 4
 
     disc_span_counter = Counter()
     for disc_read in discordants.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + 1 + (mean_ospan + sd_ospan * z)):
@@ -100,7 +103,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, bam, splitters, disc
     ref_span_counter = Counter()
     for ref_read in bam.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + (mean_ospan + sd_ospan * z) + 1):
         if not ref_read.is_duplicate and ref_read.is_proper_pair and not ref_read.is_secondary and not ref_read.is_reverse and ref_read.pnext - (ref_read.positions[-1] + 1) > 0:
-            #print ref_read
+            print ref_read
             #print ref_read.positions[-1], ref_read.pnext, ref_read.pnext - (ref_read.positions[-1] + 1), ref_read.tlen
             for posA in range(ref_read.positions[-1], ref_read.pnext):
                 ref_span_counter[posA] +=1
