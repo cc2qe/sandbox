@@ -87,41 +87,41 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
     #    print split_read.pos + split_read.inferred_length
 
     # now do the spanning coverage over region A
-    mean_ispan = 118
-    sd_ispan = 80
-    mean_ospan = mean_ispan + 2 * readlength
+    mean_ospan = 320
     sd_ospan = 80
+    mean_ispan = mean_ospan - (2 * flank)
+    sd_ispan = 80
 
     ref_span_counter = Counter()
     disc_span_counter = Counter()
     for read in bam.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + (mean_ospan + sd_ospan * z)):
-        if not read.is_reverse and read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
+        if read.tid == read.rnext and not read.is_reverse and read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
             #print read
             #print read.pos, read.qstart, read.qlen, read.pos - read.qstart
+            #print read.pos, read.positions[0], read.positions[-1], read.aend
 
             mate = bam.mate(read)
             #print mate
             #print "MATE", mate.pos, mate.pos - mate.qstart
-            ispan_left = read.pos - read.qstart + readlength + 1
-            ispan_right = mate.pos - mate.qstart - 1
+            ispan_left = read.pos + flank
+            ispan_right = mate.aend - flank - 1
             ispan = ispan_right - ispan_left
             #print ispan_left, ispan_right, ispan
 
-            if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.cigar == [(0,readlength)] and mate.cigar == [(0,readlength)]:
+            if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= flank and mate.qlen >= flank:
                 #print read
                 # print ispan
                 # CHECK FOR 1-OFF PROBLEMS HERE
-                for posA in range(ispan_left + 1, ispan_right + 2):
+                for posA in range(ispan_left + 1, ispan_right + 1):
                     ref_span_counter[posA] += 1
 
-            # check mate on same chrom
             # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-            elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan *z) and read.cigar == [(0,readlength)] and mate.cigar == [(0,readlength)]:
+            elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan *z) and read.qlen >= flank and mate.qlen >= flank:
                 #print read
                 #print ispan_left, ispan_right, ispan
                 #print read.cigar[-1][0]
                 #print read.alen, read.qlen, read.rlen
-                for posA in range(ispan_left + 1, ispan_right + 2):
+                for posA in range(ispan_left + 1, ispan_right + 1):
                     disc_span_counter[posA] += 1
 
     '''
@@ -147,33 +147,32 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
     ref_span_counter = Counter()
     disc_span_counter = Counter()
     for read in bam.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z)):
-        if read.is_reverse and not read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
+        if read.tid == read.rnext and read.is_reverse and not read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
             #print read
             #print read.pos, read.pos - read.qstart
 
             mate = bam.mate(read)
             #print mate
             #print "MATE", mate.pos, mate.pos - mate.qstart
-            ispan_left = mate.pos - mate.qstart + readlength + 1
-            ispan_right = read.pos - read.qstart - 1
+            ispan_left = mate.pos + flank
+            ispan_right = read.aend - flank - 1
             ispan = ispan_right - ispan_left
             #print ispan_left, ispan_right, ispan, mate.tlen
             
-            if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.cigar == [(0,readlength)] and mate.cigar == [(0,readlength)]:
+            if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= flank and mate.qlen >= flank:
                 # print read
                 # print ispan
                 # CHECK FOR 1-OFF PROBLEMS HERE
-                for posB in range(ispan_left + 1, ispan_right + 2):
+                for posB in range(ispan_left + 1, ispan_right + 1):
                     ref_span_counter[posB] += 1
             
-            # check mate on same chrom
             # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-            elif ispan > 0 and ispan_left + 1 > startA and ispan_left + 1 < endA and read.cigar == [(0,readlength)] and mate.cigar == [(0,readlength)]:
+            elif ispan > 0 and ispan_left + 1 > startA - (mean_ispan + sd_ispan *z) and ispan_left + 1 < endA and read.qlen >= flank and mate.qlen >= flank:
                 #print read
                 #print ispan_left, ispan_right, ispan
                 #print read.cigar[-1][0]
                 #print read.alen, read.qlen, read.rlen
-                for posB in range(ispan_left + 1, ispan_right + 2):
+                for posB in range(ispan_left + 1, ispan_right + 1):
                     disc_span_counter[posB] += 1
 
 
