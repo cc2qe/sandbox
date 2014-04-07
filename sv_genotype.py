@@ -52,7 +52,6 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
         #i = split_read.pos + split_read.inferred_length
         #print split_read.pos, i, split_read.cigar
 
-
     #print split_counter[2911653]
 
     for posA in range(startA, endA + 1):
@@ -96,9 +95,9 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
     ref_span_counter = Counter()
     disc_span_counter = Counter()
     for read in bam.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + (mean_ospan + sd_ospan * z)):
-        if not read.is_reverse and read.mate_is_reverse and not read.is_secondary and not read.mate_is_unmapped:
+        if not read.is_reverse and read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
             #print read
-            #print read.pos, read.pos - read.qstart
+            #print read.pos, read.qstart, read.qlen, read.pos - read.qstart
 
             mate = bam.mate(read)
             #print mate
@@ -107,8 +106,8 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
             ispan_right = mate.pos - mate.qstart - 1
             ispan = ispan_right - ispan_left
             #print ispan_left, ispan_right, ispan
-            
-            if ispan > 0 and ispan < mean_ispan + sd_ispan * z:
+
+            if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.cigar == [(0,readlength)] and mate.cigar == [(0,readlength)]:
                 #print read
                 # print ispan
                 # CHECK FOR 1-OFF PROBLEMS HERE
@@ -117,7 +116,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
 
             # check mate on same chrom
             # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-            elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan *z):
+            elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan *z) and read.cigar == [(0,readlength)] and mate.cigar == [(0,readlength)]:
                 #print read
                 #print ispan_left, ispan_right, ispan
                 #print read.cigar[-1][0]
@@ -148,7 +147,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
     ref_span_counter = Counter()
     disc_span_counter = Counter()
     for read in bam.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z)):
-        if read.is_reverse and not read.mate_is_reverse and not read.is_secondary and not read.mate_is_unmapped:
+        if read.is_reverse and not read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
             #print read
             #print read.pos, read.pos - read.qstart
 
@@ -160,8 +159,8 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
             ispan = ispan_right - ispan_left
             #print ispan_left, ispan_right, ispan, mate.tlen
             
-            if ispan > 0 and ispan < mean_ispan + sd_ispan * z:
-                #print read
+            if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.cigar == [(0,readlength)] and mate.cigar == [(0,readlength)]:
+                # print read
                 # print ispan
                 # CHECK FOR 1-OFF PROBLEMS HERE
                 for posB in range(ispan_left + 1, ispan_right + 2):
@@ -169,7 +168,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
             
             # check mate on same chrom
             # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-            elif ispan > 0 and ispan_left + 1 > startA and ispan_left + 1 < endA:
+            elif ispan > 0 and ispan_left + 1 > startA and ispan_left + 1 < endA and read.cigar == [(0,readlength)] and mate.cigar == [(0,readlength)]:
                 #print read
                 #print ispan_left, ispan_right, ispan
                 #print read.cigar[-1][0]
