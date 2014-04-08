@@ -89,7 +89,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
     # now do the spanning coverage over region A
     mean_ospan = 320
     sd_ospan = 80
-    mean_ispan = mean_ospan - (2 * flank)
+    mean_ispan = mean_ospan - (2 * readlength)
     sd_ispan = 80
 
     ref_span_counter = Counter()
@@ -116,7 +116,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
                     ref_span_counter[posA] += 1
 
             # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-            elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan *z) and read.qlen >= flank and mate.qlen >= flank:
+            elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan * z) and read.qlen >= flank and mate.qlen >= flank:
                 #print read
                 #print ispan_left, ispan_right, ispan
                 #print read.cigar[-1][0]
