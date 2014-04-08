@@ -89,7 +89,7 @@ def sv_genotype(sv_id, regionA, regionB, flank, readlength, z, bam, splitters, d
     # now do the spanning coverage over region A
     mean_ospan = 320
     sd_ospan = 80
-    mean_ispan = mean_ospan - (2 * readlength)
+    mean_ispan = mean_ospan - (2 * flank)
     sd_ispan = 80
 
     ref_span_counter = Counter()
