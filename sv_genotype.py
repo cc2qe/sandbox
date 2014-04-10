@@ -29,6 +29,7 @@ description: Basic python script template")
     parser.add_argument('-B', '--bam', type=pysam.Samfile, required=True, default=None, help='full bam file for sample')
     parser.add_argument('-S', '--splitters', type=pysam.Samfile, required=False, default=None, help='split-read bam file for sample')
     parser.add_argument('-D', '--discordants', type=pysam.Samfile, required=False, default=None, help='discordant-read bam file for sample')
+    parser.add_argument('-v', '--verbose', required=False, action='store_true', help='verbose')
 
     # parse the arguments
     args = parser.parse_args()
@@ -37,7 +38,7 @@ description: Basic python script template")
     return args
 
 # primary function
-def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam, splitters, discordants):
+def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam, splitters, discordants, verbose):
     (chromA, pos_stringA) = regionA.split(':')
     (startA, endA) = map(int, pos_stringA.split('-'))
 
@@ -49,9 +50,10 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
         if split_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
             split_counter[split_read.pos + split_read.cigar[0][1]] += 1
 
-        #print split_read
-        #i = split_read.pos + split_read.inferred_length
-        #print split_read.pos, i, split_read.cigar
+        if verbose:
+            print split_read
+            #i = split_read.pos + split_read.inferred_length
+            #print split_read.pos, i, split_read.cigar
 
     #print split_counter[2911653]
 
@@ -59,8 +61,9 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
         ref_counter = 0
         # make sure these are actually ref
         for ref_read in bam.fetch(chromA, posA - 1, posA):
-            #print ref_read
-            #print ref_read.pos, ref_read.pos + ref_read.inferred_length, ref_read.aend
+            if verbose:
+                print ref_read
+                #print ref_read.pos, ref_read.pos + ref_read.inferred_length, ref_read.aend
             if not ref_read.is_duplicate and posA - ref_read.pos >= splflank and ref_read.aend - posA >= splflank:
                 ref_counter += 1
         print '\t'.join(map(str, (chromA, posA, ref_counter, split_counter[posA], 'spl_A', sv_id)))
@@ -69,8 +72,9 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
     # now do the same over regionB
     split_counter = Counter() # counts the number of splitters over each breakpoint
     for split_read in splitters.fetch(chromB, startB - 1, endB):
-        #print split_read
-        #print split_read.positions[-1]
+        if verbose:
+            print split_read
+            #print split_read.positions[-1]
         if split_read.cigar[-1][0] == 0: # and split_read.pnext > startB - readlength:
             split_counter[split_read.positions[-1] - split_read.cigar[-1][1] + 1] += 1
 
@@ -87,6 +91,8 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
     #for split_read in splitters.fetch(break_chrom, break_pos - 1, break_pos):
     #    print split_read.pos + split_read.inferred_length
 
+    exit(1)
+
     # now do the spanning coverage over region A
     mean_ospan = 320
     sd_ospan = 80
@@ -97,9 +103,10 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
     disc_span_counter = Counter()
     for read in bam.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + (mean_ospan + sd_ospan * z)):
         if read.tid == read.rnext and not read.is_reverse and read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
-            #print read
-            #print read.pos, read.qstart, read.qlen, read.pos - read.qstart
-            #print read.pos, read.positions[0], read.positions[-1], read.aend
+            if verbose:
+                print read
+                #print read.pos, read.qstart, read.qlen, read.pos - read.qstart
+                #print read.pos, read.positions[0], read.positions[-1], read.aend
 
             mate = bam.mate(read)
             #print mate
@@ -118,10 +125,11 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
 
             # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
             elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
-                #print read
-                #print ispan_left, ispan_right, ispan
-                #print read.cigar[-1][0]
-                #print read.alen, read.qlen, read.rlen
+                if verbose:
+                    print read
+                    #print ispan_left, ispan_right, ispan
+                    #print read.cigar[-1][0]
+                    #print read.alen, read.qlen, read.rlen
                 for posA in range(ispan_left + 1, ispan_right + 1):
                     disc_span_counter[posA] += 1
 
@@ -149,8 +157,9 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
     disc_span_counter = Counter()
     for read in bam.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z)):
         if read.tid == read.rnext and read.is_reverse and not read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
-            #print read
-            #print read.pos, read.pos - read.qstart
+            if verbose:
+                print read
+                #print read.pos, read.pos - read.qstart
 
             mate = bam.mate(read)
             #print mate
@@ -169,10 +178,11 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
             
             # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
             elif ispan > 0 and ispan_left + 1 > startA - (mean_ispan + sd_ispan *z) and ispan_left + 1 < endA and read.qlen >= discflank and mate.qlen >= discflank:
-                #print read
-                #print ispan_left, ispan_right, ispan
-                #print read.cigar[-1][0]
-                #print read.alen, read.qlen, read.rlen
+                if verbose:
+                    print read
+                    #print ispan_left, ispan_right, ispan
+                    #print read.cigar[-1][0]
+                    #print read.alen, read.qlen, read.rlen
                 for posB in range(ispan_left + 1, ispan_right + 1):
                     disc_span_counter[posB] += 1
 
@@ -228,7 +238,7 @@ def main():
     args = get_args()
 
     # call primary function
-    sv_genotype(args.id, args.regionA, args.regionB, args.splflank, args.discflank, args.readlength, args.z, args.bam, args.splitters, args.discordants)
+    sv_genotype(args.id, args.regionA, args.regionB, args.splflank, args.discflank, args.readlength, args.z, args.bam, args.splitters, args.discordants, args.verbose)
 
     # close the bam files
     args.bam.close()
