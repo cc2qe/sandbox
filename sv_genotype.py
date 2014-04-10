@@ -91,8 +91,6 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
     #for split_read in splitters.fetch(break_chrom, break_pos - 1, break_pos):
     #    print split_read.pos + split_read.inferred_length
 
-    exit(1)
-
     # now do the spanning coverage over region A
     mean_ospan = 320
     sd_ospan = 80
