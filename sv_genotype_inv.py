@@ -20,6 +20,8 @@ version: " + __version__ + "\n\
 description: Basic python script template")
     parser.add_argument('-a', '--regionA', required=True, help='breakpoint region A (chrom:start-end)')
     parser.add_argument('-b', '--regionB', required=True, help='breakpoint region B (chrom:start-end)')
+    parser.add_argument('-c', '--strandA', required=True, help='strand of region A (+ or -)')
+    parser.add_argument('-d', '--strandB', required=True, help='strand of region B (+ or -)')
     parser.add_argument('-i', '--id', required=False, default=1, help='id for the SV')
     #parser.add_argument('-c', '--landing', required=False, default=None,  help='landing area (chrom:start-end)')
     parser.add_argument('-f', '--splflank', type=int, required=False, default=20, help='min number of split read query bases flanking breakpoint on either side [20]')
@@ -38,7 +40,7 @@ description: Basic python script template")
     return args
 
 # primary function
-def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam, splitters, discordants, verbose):
+def sv_genotype(sv_id, regionA, regionB, strandA, strandB, splflank, discflank, readlength, z, bam, splitters, discordants, verbose):
     (chromA, pos_stringA) = regionA.split(':')
     (startA, endA) = map(int, pos_stringA.split('-'))
 
@@ -47,13 +49,14 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
 
     split_counter = Counter() # counts the number of splitters over each breakpoint
     for split_read in splitters.fetch(chromA, startA - 1, endA):
-        if split_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
-            split_counter[split_read.pos + split_read.cigar[0][1]] += 1
-
         if verbose:
             print split_read
             #i = split_read.pos + split_read.inferred_length
             #print split_read.pos, i, split_read.cigar
+        if strandA == '+' and split_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
+            split_counter[split_read.pos + split_read.cigar[0][1]] += 1
+        elif strandA == '-' and split_read.cigar[-1][0] == 0:
+            split_counter[split_read.aend - split_read.cigar[-1][1] + 1] += 1
 
     #print split_counter[2911653]
 
@@ -75,8 +78,10 @@ def sv_genotype(sv_id, regionA, regionB, splflank, discflank, readlength, z, bam
         if verbose:
             print split_read
             #print split_read.positions[-1]
-        if split_read.cigar[-1][0] == 0: # and split_read.pnext > startB - readlength:
-            split_counter[split_read.positions[-1] - split_read.cigar[-1][1] + 1] += 1
+        if strandB == '+' and split_read.cigar[0][0] == 0:
+            split_counter[split_read.pos + split_read.cigar[0][1]] += 1
+        elif strandB == '-' and split_read.cigar[-1][0] == 0: # and split_read.pnext > startB - readlength:
+            split_counter[split_read.aend - split_read.cigar[-1][1] + 1] += 1
 
     # maybe use AlignedRead.positions to get the overlap.
     # or AlignedRead.overlap
@@ -236,7 +241,7 @@ def main():
     args = get_args()
 
     # call primary function
-    sv_genotype(args.id, args.regionA, args.regionB, args.splflank, args.discflank, args.readlength, args.z, args.bam, args.splitters, args.discordants, args.verbose)
+    sv_genotype(args.id, args.regionA, args.regionB, args.strandA, args.strandB, args.splflank, args.discflank, args.readlength, args.z, args.bam, args.splitters, args.discordants, args.verbose)
 
     # close the bam files
     args.bam.close()
