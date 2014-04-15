@@ -105,115 +105,77 @@ def sv_genotype(sv_id, regionA, regionB, strandA, strandB, splflank, discflank, 
     ref_span_counter = Counter()
     disc_span_counter = Counter()
     for read in bam.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + (mean_ospan + sd_ospan * z)):
-        if read.tid == read.rnext and not read.is_reverse and read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
-            if verbose:
-                print read
-                #print read.pos, read.qstart, read.qlen, read.pos - read.qstart
-                #print read.pos, read.positions[0], read.positions[-1], read.aend
-
-            mate = bam.mate(read)
-            #print mate
-            #print "MATE", mate.pos, mate.pos - mate.qstart
-            ispan_left = read.pos + discflank
-            ispan_right = mate.aend - discflank - 1
-            ispan = ispan_right - ispan_left
-            #print ispan_left, ispan_right, ispan
-
-            if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
-                #print read
-                # print ispan
-                # CHECK FOR 1-OFF PROBLEMS HERE
-                for posA in range(ispan_left + 1, ispan_right + 1):
-                    ref_span_counter[posA] += 1
-
-            # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-            elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
+        if not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
+            if read.tid == read.rnext and strandA == '+' and strandB == '-' and not read.is_reverse and read.mate_is_reverse:
                 if verbose:
                     print read
+                    #print read.pos, read.qstart, read.qlen, read.pos - read.qstart
+                    #print read.pos, read.positions[0], read.positions[-1], read.aend
+                    
+                    mate = bam.mate(read)
+                    #print mate
+                    #print "MATE", mate.pos, mate.pos - mate.qstart
+                    ispan_left = read.pos + discflank
+                    ispan_right = mate.aend - discflank - 1
+                    ispan = ispan_right - ispan_left
                     #print ispan_left, ispan_right, ispan
-                    #print read.cigar[-1][0]
-                    #print read.alen, read.qlen, read.rlen
-                for posA in range(ispan_left + 1, ispan_right + 1):
-                    disc_span_counter[posA] += 1
+                    
+                if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
+                    #print read
+                    # print ispan
+                    # CHECK FOR 1-OFF PROBLEMS HERE
+                    for posA in range(ispan_left + 1, ispan_right + 1):
+                        ref_span_counter[posA] += 1
+                        
+                # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
+                elif ispan > 0 and ispan_right + 1 > startB and ispan_right + 1 < endB + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
+                    if verbose:
+                        print read
+                        #print ispan_left, ispan_right, ispan
+                        #print read.cigar[-1][0]
+                        #print read.alen, read.qlen, read.rlen
+                    for posA in range(ispan_left + 1, ispan_right + 1):
+                        disc_span_counter[posA] += 1
 
-    '''
-    disc_span_counter = Counter()
-    for disc_read in discordants.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + 1 + (mean_ospan + sd_ospan * z)):
-        if not disc_read.is_duplicate and not disc_read.is_reverse and not disc_read.is_secondary and disc_read.pnext >= startB and disc_read.pnext < endB + 1 + (mean_ospan + sd_ospan * z):
-            for posA in range(disc_read.positions[-1], disc_read.pnext):
-                disc_span_counter[posA] += 1
+        for posA in range(startA, endA + 1):
+            print '\t'.join(map(str, (chromA, posA, ref_span_counter[posA], disc_span_counter[posA], 'disc_A', sv_id)))
 
-    ref_span_counter = Counter()
-    for ref_read in bam.fetch(chromA, startA - 1 - (mean_ospan + sd_ospan * z), endA + (mean_ospan + sd_ospan * z) + 1):
-        if not ref_read.is_duplicate and ref_read.is_proper_pair and not ref_read.is_secondary and not ref_read.is_reverse and ref_read.pnext - (ref_read.positions[-1] + 1) > 0:
-            print ref_read
-            #print ref_read.positions[-1], ref_read.pnext, ref_read.pnext - (ref_read.positions[-1] + 1), ref_read.tlen
-            for posA in range(ref_read.positions[-1], ref_read.pnext):
-                ref_span_counter[posA] +=1
-    '''
-
-    for posA in range(startA, endA + 1):
-        print '\t'.join(map(str, (chromA, posA, ref_span_counter[posA], disc_span_counter[posA], 'disc_A', sv_id)))
-
-    # do the same over region B
-    ref_span_counter = Counter()
-    disc_span_counter = Counter()
-    for read in bam.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z)):
-        if read.tid == read.rnext and read.is_reverse and not read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
-            if verbose:
-                print read
-                #print read.pos, read.pos - read.qstart
-
-            mate = bam.mate(read)
-            #print mate
-            #print "MATE", mate.pos, mate.pos - mate.qstart
-            ispan_left = mate.pos + discflank
-            ispan_right = read.aend - discflank - 1
-            ispan = ispan_right - ispan_left
-            #print ispan_left, ispan_right, ispan, mate.tlen
-            
-            if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
-                # print read
-                # print ispan
-                # CHECK FOR 1-OFF PROBLEMS HERE
-                for posB in range(ispan_left + 1, ispan_right + 1):
-                    ref_span_counter[posB] += 1
-            
-            # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-            elif ispan > 0 and ispan_left + 1 > startA - (mean_ispan + sd_ispan *z) and ispan_left + 1 < endA and read.qlen >= discflank and mate.qlen >= discflank:
+        # do the same over region B
+        ref_span_counter = Counter()
+        disc_span_counter = Counter()
+        for read in bam.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z)):
+            if strandA == '+' and strandB == '-' and  read.tid == read.rnext and read.is_reverse and not read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
                 if verbose:
                     print read
-                    #print ispan_left, ispan_right, ispan
-                    #print read.cigar[-1][0]
-                    #print read.alen, read.qlen, read.rlen
-                for posB in range(ispan_left + 1, ispan_right + 1):
-                    disc_span_counter[posB] += 1
+                    #print read.pos, read.pos - read.qstart
+                    
+                mate = bam.mate(read)
+                #print mate
+                #print "MATE", mate.pos, mate.pos - mate.qstart
+                ispan_left = mate.pos + discflank
+                ispan_right = read.aend - discflank - 1
+                ispan = ispan_right - ispan_left
+                #print ispan_left, ispan_right, ispan, mate.tlen
+                
+                if ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
+                    # print read
+                    # print ispan
+                    # CHECK FOR 1-OFF PROBLEMS HERE
+                    for posB in range(ispan_left + 1, ispan_right + 1):
+                        ref_span_counter[posB] += 1
+                        
+                # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
+                elif ispan > 0 and ispan_left + 1 > startA - (mean_ispan + sd_ispan *z) and ispan_left + 1 < endA and read.qlen >= discflank and mate.qlen >= discflank:
+                    if verbose:
+                        print read
+                        #print ispan_left, ispan_right, ispan
+                        #print read.cigar[-1][0]
+                        #print read.alen, read.qlen, read.rlen
+                    for posB in range(ispan_left + 1, ispan_right + 1):
+                        disc_span_counter[posB] += 1
 
-
-    '''
-    disc_span_counter = Counter()
-    for disc_read in discordants.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z)):
-        # NOTE: below only works for deletions
-        if not disc_read.is_duplicate and disc_read.is_reverse and not disc_read.is_secondary and disc_read.pnext + 100 < endA + 1:
-            #print disc_read
-            for posB in range(disc_read.pnext + readlength, disc_read.positions[0]):
-                disc_span_counter[posB] += 1
-
-    # print disc_span_counter
-
-    ref_span_counter = Counter()
-    for ref_read in bam.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z) + 1):
-        # NOTE: BELOW ONLY WORKS FOR DELETIONS, NOT WEIRDLY ORIENTED STUFF
-        if not ref_read.is_duplicate and ref_read.is_proper_pair and not ref_read.is_secondary and ref_read.is_reverse and ref_read.pnext + readlength - (ref_read.positions[0] + 1) < 0:
-            #print ref_read
-            #print ref_read.pnext + readlength, ref_read.positions[0]
-            for posB in range(ref_read.pnext + readlength, ref_read.positions[0]):
-                #print posB
-                ref_span_counter[posB] +=1
-    '''
-
-    for posB in range(startB, endB + 1):
-        print '\t'.join(map(str, (chromB, posB, ref_span_counter[posB], disc_span_counter[posB], 'disc_B', sv_id)))
+        for posB in range(startB, endB + 1):
+            print '\t'.join(map(str, (chromB, posB, ref_span_counter[posB], disc_span_counter[posB], 'disc_B', sv_id)))
 
 
 def ispan(read, readlength):
