@@ -144,7 +144,7 @@ def sv_genotype(sv_id, regionA, regionB, strandA, strandB, splflank, discflank, 
         ref_span_counter = Counter()
         disc_span_counter = Counter()
         for read in bam.fetch(chromB, startB - 1 - (mean_ospan + sd_ospan * z), endB + (mean_ospan + sd_ospan * z)):
-            if strandA == '+' and strandB == '-' and  read.tid == read.rnext and read.is_reverse and not read.mate_is_reverse and not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
+            if read.tid == read.rnext and ((strandA == '+' and not read.mate_is_reverse) or (strandA == '-' and read.mate_is_reverse)) and (strandB == '-' and read.is_reverse and not read.mate_is_reverse:
                 if verbose:
                     print read
                     #print read.pos, read.pos - read.qstart
