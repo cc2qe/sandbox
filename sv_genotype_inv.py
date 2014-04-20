@@ -178,6 +178,9 @@ def sv_genotype(sv_id, regionA, regionB, strandA, strandB, splflank, discflank, 
             print '\t'.join(map(str, (chromB, posB, ref_span_counter[posB], disc_span_counter[posB], 'disc_B', sv_id)))
 
 
+def ispan(read, mate, 
+
+
 def ispan(read, readlength):
     if not read.is_reverse:
         # these are (a,b] intervals
@@ -187,13 +190,6 @@ def ispan(read, readlength):
         left = read.pnext + readlength
         right = read.positions[0]
     return right - left
-
-
-def calc_somthing(blocklist):
-    print blocklist
-    for read in blocklist:
-       print read
-       print
 
 # --------------------------------------
 # main function
