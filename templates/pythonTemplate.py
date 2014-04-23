@@ -49,17 +49,11 @@ def main():
     # parse the command line args
     args = get_args()
 
-    # store into global values
-    argA = args.argA
-    argB = args.argB
-    flagC = args.flagC
-    file = args.input
-    
     # call primary function
-    myFunction(argA, argB, flagC, file)
+    myFunction(args.argA, args.argB, args.flagC, args.input)
 
     # close the input file
-    file.close()
+    args.input.close()
 
 # initialize the script
 if __name__ == '__main__':

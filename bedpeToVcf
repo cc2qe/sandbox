@@ -1,0 +1,193 @@
+#!/usr/bin/env python
+
+import argparse, sys
+import math, time
+from argparse import RawTextHelpFormatter
+
+__author__ = "Colby Chiang (cc2qe@virginia.edu)"
+__version__ = "$Revision: 0.0.1 $"
+__date__ = "$Date: 2014-04-23 14:31 $"
+
+# --------------------------------------
+# define functions
+
+def get_args():
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
+bedpeToVcf\n\
+author: " + __author__ + "\n\
+version: " + __version__ + "\n\
+description: Convert a LUMPY bedpe file to VCF")
+    # parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
+    # parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
+    # parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
+    parser.add_argument('-b', '--bedpe', type=argparse.FileType('r'), default=None, help='BEDPE input (default: stdin)')
+    parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Output VCF to write (default: stdout)')
+
+    # parse the arguments
+    args = parser.parse_args()
+
+    # if no input, check if part of pipe and if so, read stdin.
+    if args.bedpe == None:
+        if sys.stdin.isatty():
+            parser.print_help()
+            exit(1)
+        else:
+            args.bedpe = sys.stdin
+
+    # send back the user input
+    return args
+
+class Bedpe(object):
+        def __init__(self, bedList):
+                self.c1 = bedList[0]
+                self.s1 = int(bedList[1])
+                self.e1 = int(bedList[2])
+                self.c2 = bedList[3]
+                self.s2 = int(bedList[4])
+                self.e2 = int(bedList[5])
+                self.name = bedList[6]
+                self.score = float(bedList[7])
+                self.o1 = bedList[8]
+                self.o2 = bedList[9]
+
+                # -------------------------------------------
+                # LUMPY specific attributes below
+
+                # Phred quality score
+                if self.score > 0:
+                    self.phred = -10 * math.log(self.score, 10)
+                else: self.phred = 'inf'
+
+                # get svtype based on strand orientation
+                # (INS, CNV, and BND are also legal VCF 4.2 svtypes, but we're not yet supporting them)
+                if self.c1 == self.c2:
+                    if self.o1 == '+' and self.o2 == '-':
+                        self.svtype = 'DEL'
+                    elif self.o1 == '-' and self.o2 == '+':
+                        self.svtype = 'DUP'
+                    elif self.o1 == self.o2:
+                        self.svtype = 'INV'
+
+                # get the max probability breakend locations
+                self.b1, self.b2 = map(int,[a.split(':')[1] for a in bedList[13][4:].split(';')])
+
+                # get the 95% confidence interval
+#                [[self.ci95_s1, self.ci95_e1], [self.ci95_s2, self.ci95_e2]] = [b.split('-') for b in [a.split(':')[1] for a in bedList[14][3:].split(';')]]
+                ci95_1, ci95_2 = [a.split(':')[1] for a in bedList[14][3:].split(';')]
+                self.ci95_s1, self.ci95_e1 = map(int,ci95_1.split('-'))
+                self.ci95_s2, self.ci95_e2 = map(int,ci95_2.split('-'))
+                
+
+
+
+                
+                
+# write the VCF header
+def make_vcf_header(vcf_out):
+    vcf_out.write(
+        '##fileformat=VCFv4.2\n\
+##fileDate=' + time.strftime('%Y%m%d') + '\n\
+##reference=\n\
+##INFO=<ID=BKPTID,Number=.,Type=String,Description="ID of the assembled alternate allele in the assembly file">\n\
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END for imprecise variants">\n\
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">\n\
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">\n\
+##INFO=<ID=HOMLEN,Number=.,Type=Integer,Description="Length of base pair identical micro-homology at event breakpoints">\n\
+##INFO=<ID=HOMSEQ,Number=.,Type=String,Description="Sequence of base pair identical micro-homology at event breakpoints">\n\
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">\n\
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">\n\
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n\
+##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality">\n\
+##FORMAT<ID=DP,Number=1,Type=Integer,Description="Read depth">\n\
+##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">\n\
+')
+    vcf_out.write('\t'.join([
+                '#CHROM',
+                'POS',
+                'ID',
+                'REF',
+                'ALT',
+                'QUAL',
+                'FILTER',
+                'INFO',
+                'FORMAT',
+                'SAMPLE1'
+                ]) + '\n')
+    return
+
+class Genotype(object):
+    def __init__(self):
+        self.name = 'sample001'
+        self.GT = '.'
+        self.GQ = '1.0'
+        
+class Vcf(object):
+    def __init__(self):
+        self.sample_list = 'now'
+
+class Variant(object):
+    def __init__(self, vcf_file, info, format):
+        self.vcf = vcf_file
+        self.sample_list = vcf_file.sample_list
+        self.info
+
+# primary function
+def make_vcf(bedpe_file, vcf_out):
+    make_vcf_header(vcf_out)
+
+    for line in bedpe_file:
+        bedpe = Bedpe(line.rstrip().split('\t'))
+        
+        # VCF INFO field
+        info = dict()
+        info['SVTYPE'] = str(bedpe.svtype)
+        info['END'] = str(bedpe.b2 - 1) # (VCF 4.2 spec: POS + length of REF allele - 1)
+        if bedpe.svtype == 'DEL':
+            info['SVLEN'] = str(-1*((bedpe.b2 - 1) - bedpe.b1))
+        else:
+            info['SVLEN'] = str((bedpe.b2 - 1) - bedpe.b1)
+        info['CIPOS'] = ','.join(map(str, [(bedpe.s1 + 1) - bedpe.b1, bedpe.e1 - bedpe.b1]))
+        info['CIEND'] = ','.join(map(str, [(bedpe.s2 + 1) - bedpe.b2, bedpe.e2 - bedpe.b2]))
+        info['CIPOS95'] = ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1]))
+        info['CIEND95'] = ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2]))
+
+        info_string =  ';'.join(['='.join((k, info[k])) for k in info.keys()])
+
+        format = dict()
+        # format
+
+
+        # print bedpe.c1, bedpe.b1, bedpe.b1
+        vcf_out.write( '\t'.join(map(str,[
+                        bedpe.c1,
+                        bedpe.b1,
+                        bedpe.name,
+                        'N',
+                        '<' + bedpe.svtype + '>',
+                        bedpe.phred,
+                        '.',
+                        info_string
+                        
+                        ])) + '\n' )
+        
+    # close the VCF output file
+    vcf_out.close()
+    
+    return
+
+# --------------------------------------
+# main function
+
+def main():
+    # parse the command line args
+    args = get_args()
+
+    # call primary function
+    make_vcf(args.bedpe, args.output)
+
+    # close the input file
+    args.bedpe.close()
+
+# initialize the script
+if __name__ == '__main__':
+    sys.exit(main())
