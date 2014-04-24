@@ -96,17 +96,17 @@ class Vcf(object):
         self.alt_list = []
 
         # add info fields
-        self.add_info('BKPTID', '.', 'String', 'ID of the assembled alternate allele in the assembly file')
+        self.add_info('SVTYPE', 1, 'String', 'Type of structural variant')
+        self.add_info('END', 1, 'Integer', 'End position of the variant described in this record')
+        self.add_info('SVLEN', '.', 'Integer', 'Difference in length between REF and ALT alleles')
+        self.add_info('IMPRECISE', 0, 'Flag', 'Imprecise structural variation')
         self.add_info('CIEND', 2, 'Integer', 'Confidence interval around END for imprecise variants')
         self.add_info('CIPOS', 2, 'Integer', 'Confidence interval around POS for imprecise variants')
         self.add_info('CIEND95', 2, 'Integer', '95% confidence interval around END for imprecise variants')
         self.add_info('CIPOS95', 2, 'Integer', '95% confidence interval around POS for imprecise variants')
-        self.add_info('END', 1, 'Integer', 'End position of the variant described in this record')
+        self.add_info('BKPTID', '.', 'String', 'ID of the assembled alternate allele in the assembly file')
         self.add_info('HOMLEN', '.', 'Integer', 'Length of base pair identical micro-homology at event breakpoints')
         self.add_info('HOMSEQ', '.', 'String', 'Sequence of base pair identical micro-homology at event breakpoints')
-        self.add_info('SVLEN', '.', 'Integer', 'Difference in length between REF and ALT alleles')
-        self.add_info('SVTYPE', 1, 'String', 'Type of structural variant')
-        self.add_info('IMPRECISE', 0, 'Flag', 'Imprecise structural variation')
         self.add_info('SOMATIC', 0, 'Flag', 'Somatic mutation')
 
         # add alt fields
