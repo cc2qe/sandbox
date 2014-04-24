@@ -85,7 +85,14 @@ class Bedpe(object):
 
                 # get variant samples
                 self.sample_ids = [b[0] for b in [a.split(',') for a in bedList[11][4:].split(';')]]
-                
+
+                # get evidence amount for each sample id
+                self.id_evidence = dict()
+                s = [b[0] for b in [a.split(',') for a in bedList[11][4:].split(';')]]
+                e = map(int,[b[1] for b in [a.split(',') for a in bedList[11][4:].split(';')]])
+                for i in range(len(s)):
+                    self.id_evidence[s[i]] = e[i]
+
 class Vcf(object):
     def __init__(self, fasta):
         self.file_format = 'VCFv4.2'
@@ -98,8 +105,8 @@ class Vcf(object):
 
         # add info fields
         self.add_info('SVTYPE', 1, 'String', 'Type of structural variant')
-        self.add_info('END', 1, 'Integer', 'End position of the variant described in this record')
         self.add_info('SVLEN', '.', 'Integer', 'Difference in length between REF and ALT alleles')
+        self.add_info('END', 1, 'Integer', 'End position of the variant described in this record')
         self.add_info('IMPRECISE', 0, 'Flag', 'Imprecise structural variation')
         self.add_info('CIPOS', 2, 'Integer', 'Confidence interval around POS for imprecise variants')
         self.add_info('CIEND', 2, 'Integer', 'Confidence interval around END for imprecise variants')
@@ -112,6 +119,12 @@ class Vcf(object):
         self.add_info('HOMLEN', '.', 'Integer', 'Length of base pair identical micro-homology at event breakpoints')
         self.add_info('HOMSEQ', '.', 'String', 'Sequence of base pair identical micro-homology at event breakpoints')
         self.add_info('SOMATIC', 0, 'Flag', 'Somatic mutation')
+
+        self.add_info('SUPPORT', '.', 'Integer', 'Number of pieces of evidence supporting the variant across all samples')
+        self.add_info('PESUPPORT', '.', 'Integer', 'Number of paired-end reads supporting the variant across all samples')
+        self.add_info('SRSUPPORT', '.', 'Integer', 'Number of split reads supporting the variant across all samples')
+        self.add_info('EVTYPE', '.', 'Integer', 'Type of LUMPY evidence contributing to the variant call')
+
 
         # add alt fields
         self.add_alt('DEL', 'Deletion')
@@ -257,7 +270,6 @@ class Variant(object):
             self.get_format_string(),
             '\t'.join(self.genotype(s).get_gt_string() for s in self.sample_list)
         ]))
-
         return s
 
 class Genotype(object):
@@ -327,6 +339,7 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
             var1.set_info('CIPOS95', ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1])))
             var1.set_info('CIEND95', ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2])))
             var1.set_info('IMPRECISE', 'True')
+            var1.set_info('EVENT', bedpe.name)
 
             if bedpe.o1 == '+':
                 if bedpe.o2 == '-':
@@ -354,18 +367,17 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
             var2.set_info('CIPOS95', ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2])))
             var2.set_info('CIEND95', ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1])))
             var2.set_info('IMPRECISE', 'True')
+            var2.set_info('EVENT', bedpe.name)
             if bedpe.o2 == '+':
                 if bedpe.o1 == '-':
                     var2.alt = '%s[%s:%s[' % (var2.ref, bedpe.c1, bedpe.b1)
                 elif bedpe.o1 == '+':
-                    var2.alt = '%s]%s:%s]' % (var2.ref, bedpe.c2, bedpe.b2)
+                    var2.alt = '%s]%s:%s]' % (var2.ref, bedpe.c1, bedpe.b1)
             elif bedpe.o2 == '-':
                 if bedpe.o1 == '+':
-                    var2.alt = ']%s:%s]%s' % (bedpe.c2, bedpe.b2, var2.ref)
+                    var2.alt = ']%s:%s]%s' % (bedpe.c1, bedpe.b1, var2.ref)
                 elif bedpe.o1 == '-':
-                    var2.alt = '[%s:%s[%s' % (bedpe.c2, bedpe.b2, var2.ref)
-
-
+                    var2.alt = '[%s:%s[%s' % (bedpe.c1, bedpe.b1, var2.ref)
 
             # get samples with variant
             var_samples = set()
@@ -406,6 +418,27 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
             var.set_info('CIPOS95', ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1])))
             var.set_info('CIEND95', ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2])))
             var.set_info('IMPRECISE', 'True')
+            var.set_info('EVENT', bedpe.name)
+            var.set_info('SUPPORT', str(sum(bedpe.id_evidence.values())))
+
+            pe_support = 0
+            sr_support = 0
+            for i in bedpe.id_evidence:
+                if sample_info[i][1] == 'PE':
+                    pe_support += 1
+                elif sample_info[i][1] == 'SR':
+                    sr_support += 1
+
+            var.set_info('PESUPPORT', str(pe_support))
+            var.set_info('SRSUPPORT', str(sr_support))
+
+            if pe_support > 0:
+                if sr_support >0:
+                    var.set_info('EVTYPE', 'PE_SR')
+                else:
+                    var.set_info('EVTYPE', 'PE_ALONE')
+            elif sr_support > 0:
+                var.set_info('EVTYPE', 'SR_ALONE')
 
             # get samples with variant
             var_samples = set()
