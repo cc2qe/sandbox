@@ -21,7 +21,7 @@ description: Convert a LUMPY bedpe file to VCF")
     # parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
     # parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
     # parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
-    parser.add_argument('-c', '--sample_config', type=argparse.FileType('r'), required=True, help='')
+    parser.add_argument('-c', '--sample_config', type=argparse.FileType('r'), required=True, help='Tab delimited sample config file of NAME id TYPE\n(Example: NA12878 10  PE)')
     parser.add_argument('-f', '--fasta', type=pysam.Fastafile, required=True, help='Indexed fasta file of the reference genome')
     parser.add_argument('-b', '--bedpe', type=argparse.FileType('r'), default=None, help='BEDPE input (default: stdin)')
     parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Output VCF to write (default: stdout)')
@@ -72,6 +72,8 @@ class Bedpe(object):
                         self.svtype = 'DUP'
                     elif self.o1 == self.o2:
                         self.svtype = 'INV'
+                else:
+                    self.svtype = 'BND'
 
                 # get the max probability breakend locations
                 self.b1, self.b2 = map(int,[a.split(':')[1] for a in bedList[13][4:].split(';')])
@@ -106,6 +108,7 @@ class Vcf(object):
         self.add_info('SVTYPE', 1, 'String', 'Type of structural variant')
         self.add_info('IMPRECISE', 0, 'Flag', 'Imprecise structural variation')
         self.add_info('SOMATIC', 0, 'Flag', 'Somatic mutation')
+
         # add alt fields
         self.add_alt('DEL', 'Deletion')
         self.add_alt('DUP', 'Duplication')
@@ -119,6 +122,11 @@ class Vcf(object):
         self.add_format('GQ', 1, 'Float', 'Genotype quality')
         self.add_format('DP', 1, 'Integer', 'Read depth')
         self.add_format('CN', 1, 'Integer', 'Copy number genotype for imprecise events')
+        self.add_format('CNQ', 1, 'Float', 'Copy number genotype quality for imprecise events')
+        self.add_format('CNL', '.', 'Float', 'Copy number genotype likelihood form imprecise events')
+        self.add_format('NQ', 1, 'Integer', 'Phred style probability score that the variant is novel')
+        self.add_format('HAP', 1, 'Integer', 'Unique haplotype identifier')
+        self.add_format('AHAP', 1, 'Integer', 'Unique identifier of ancestral haplotype')
 
     def add_info(self, id, number, type, desc):
         inf = Info(id, number, type, desc)
@@ -272,6 +280,7 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
     # write header
     vcf_out.write(myvcf.get_header() + '\n')
 
+    # parse the bedpe data
     for line in bedpe_file:
         bedpe = Bedpe(line.rstrip().split('\t'))
         var = Variant(myvcf, bedpe.c1, bedpe.b1, '.')
