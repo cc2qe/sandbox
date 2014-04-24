@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import pysam
 import argparse, sys
 import math, time
 from argparse import RawTextHelpFormatter
@@ -20,6 +21,8 @@ description: Convert a LUMPY bedpe file to VCF")
     # parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
     # parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
     # parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
+    parser.add_argument('-c', '--sample_config', type=argparse.FileType('r'), required=True, help='')
+    parser.add_argument('-f', '--fasta', type=pysam.Fastafile, required=True, help='Indexed fasta file of the reference genome')
     parser.add_argument('-b', '--bedpe', type=argparse.FileType('r'), default=None, help='BEDPE input (default: stdin)')
     parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Output VCF to write (default: stdout)')
 
@@ -59,7 +62,6 @@ class Bedpe(object):
                 else: self.phred = 'inf'
 
                 # get svtype based on strand orientation
-                # (INS, CNV, and BND are also legal VCF 4.2 svtypes, but we're not yet supporting them)
                 if self.c1 == self.c2:
                     if self.o1 == '+' and self.o2 == '-':
                         self.svtype = 'DEL'
@@ -72,104 +74,227 @@ class Bedpe(object):
                 self.b1, self.b2 = map(int,[a.split(':')[1] for a in bedList[13][4:].split(';')])
 
                 # get the 95% confidence interval
-#                [[self.ci95_s1, self.ci95_e1], [self.ci95_s2, self.ci95_e2]] = [b.split('-') for b in [a.split(':')[1] for a in bedList[14][3:].split(';')]]
                 ci95_1, ci95_2 = [a.split(':')[1] for a in bedList[14][3:].split(';')]
                 self.ci95_s1, self.ci95_e1 = map(int,ci95_1.split('-'))
                 self.ci95_s2, self.ci95_e2 = map(int,ci95_2.split('-'))
+
+                # get variant samples
+                self.sample_ids = [b[0] for b in [a.split(',') for a in bedList[11][4:].split(';')]]
                 
-
-
-
-                
-                
-# write the VCF header
-def make_vcf_header(vcf_out):
-    vcf_out.write(
-        '##fileformat=VCFv4.2\n\
-##fileDate=' + time.strftime('%Y%m%d') + '\n\
-##reference=\n\
-##INFO=<ID=BKPTID,Number=.,Type=String,Description="ID of the assembled alternate allele in the assembly file">\n\
-##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END for imprecise variants">\n\
-##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">\n\
-##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">\n\
-##INFO=<ID=HOMLEN,Number=.,Type=Integer,Description="Length of base pair identical micro-homology at event breakpoints">\n\
-##INFO=<ID=HOMSEQ,Number=.,Type=String,Description="Sequence of base pair identical micro-homology at event breakpoints">\n\
-##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">\n\
-##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">\n\
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n\
-##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality">\n\
-##FORMAT<ID=DP,Number=1,Type=Integer,Description="Read depth">\n\
-##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">\n\
-')
-    vcf_out.write('\t'.join([
-                '#CHROM',
-                'POS',
-                'ID',
-                'REF',
-                'ALT',
-                'QUAL',
-                'FILTER',
-                'INFO',
-                'FORMAT',
-                'SAMPLE1'
-                ]) + '\n')
-    return
-
-class Genotype(object):
-    def __init__(self):
-        self.name = 'sample001'
-        self.GT = '.'
-        self.GQ = '1.0'
-        
 class Vcf(object):
-    def __init__(self):
-        self.sample_list = 'now'
+    def __init__(self, fasta):
+        self.file_format = 'VCFv4.2'
+        self.reference = fasta.filename
+        self.sample_list = []
+        self.info_list = []
+        self.format_list = []
+        self.alt_list = []
+
+        # add info fields
+        self.add_info('BKPTID', '.', 'String', 'ID of the assembled alternate allele in the assembly file')
+        self.add_info('CIEND', 2, 'Integer', 'Confidence interval around END for imprecise variants')
+        self.add_info('CIPOS', 2, 'Integer', 'Confidence interval around POS for imprecise variants')
+        self.add_info('CIEND95', 2, 'Integer', '95% confidence interval around END for imprecise variants')
+        self.add_info('CIPOS95', 2, 'Integer', '95% confidence interval around POS for imprecise variants')
+        self.add_info('END', 1, 'Integer', 'End position of the variant described in this record')
+        self.add_info('HOMLEN', '.', 'Integer', 'Length of base pair identical micro-homology at event breakpoints')
+        self.add_info('HOMSEQ', '.', 'String', 'Sequence of base pair identical micro-homology at event breakpoints')
+        self.add_info('SVLEN', '.', 'Integer', 'Difference in length between REF and ALT alleles')
+        self.add_info('SVTYPE', 1, 'String', 'Type of structural variant')
+        self.add_info('IMPRECISE', 0, 'Flag', 'Imprecise structural variation')
+        self.add_info('SOMATIC', 0, 'Flag', 'Somatic mutation')
+        # add alt fields
+        self.add_alt('DEL', 'Deletion')
+        self.add_alt('DUP', 'Duplication')
+        self.add_alt('INV', 'Inversion')
+        self.add_alt('DUP:TANDEM', 'Tandem duplication')
+        self.add_alt('INS', 'Insertion of novel sequence')
+        self.add_alt('CNV', 'Copy number variable region')
+
+        # add format fields
+        self.add_format('GT', 1, 'String', 'Genotype')
+        self.add_format('GQ', 1, 'Float', 'Genotype quality')
+        self.add_format('DP', 1, 'Integer', 'Read depth')
+        self.add_format('CN', 1, 'Integer', 'Copy number genotype for imprecise events')
+
+    def add_info(self, id, number, type, desc):
+        inf = Info(id, number, type, desc)
+        self.info_list.append(inf)
+
+    def add_alt(self, id, desc):
+        alt = Alt(id, desc)
+        self.alt_list.append(alt)
+
+    def add_format(self, id, number, type, desc):
+        fmt = Format(id, number, type, desc)
+        self.format_list.append(fmt)
+        
+    def add_sample(self, name):
+        self.sample_list.append(name)
+
+    # return the VCF header
+    def get_header(self):
+        header = '\n'.join(['##fileformat=' + self.file_format,                            
+                            '##fileDate=' + time.strftime('%Y%m%d'),
+                            '##reference=' + self.reference] + \
+                           [i.hstring for i in self.info_list] + \
+                           [a.hstring for a in self.alt_list] + \
+                           [f.hstring for f in self.format_list] + \
+                           ['\t'.join([
+                               '#CHROM',
+                               'POS',
+                               'ID',
+                               'REF',
+                               'ALT',
+                               'QUAL',
+                               'FILTER',
+                               'INFO',
+                               'FORMAT'] + \
+                                      self.sample_list
+                                  )]
+                       )
+        return header
+
+class Info(object):
+    def __init__(self, id, number, type, desc):
+        self.id = str(id)
+        self.number = str(number)
+        self.type = str(type)
+        self.desc = str(desc)
+        self.hstring = '##INFO=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
+
+class Alt(object):
+    def __init__(self, id, desc):
+        self.id = str(id)
+        self.desc = str(desc)
+        self.hstring = '##ALT=<ID=' + self.id + ',Description=\"' + self.desc + '\">'
+
+class Format(object):
+    def __init__(self, id, number, type, desc):
+        self.id = str(id)
+        self.number = str(number)
+        self.type = str(type)
+        self.desc = str(desc)
+        self.hstring = '##FORMAT=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
 
 class Variant(object):
-    def __init__(self, vcf_file, info, format):
+    def __init__(self, vcf_file, chrom, pos, var_id):
         self.vcf = vcf_file
+        self.chrom = chrom
+        self.pos = pos
+        self.var_id = var_id
         self.sample_list = vcf_file.sample_list
-        self.info
+        self.info_list = vcf_file.info_list
+        self.info = dict()
+        self.format_list = vcf_file.format_list
+        self.format = dict()
+        self.gts = dict()
+
+        # make a genotype for each sample at variant
+        for s in self.sample_list:
+            self.gts[s] = Genotype(self, s)
+
+    def set_info(self, field, value):
+        if field in [i.id for i in self.info_list]:
+            self.info[field] = value
+        else:
+            sys.stderr.write('\nError: invalid INFO field, \"' + field + '\"\n')
+            exit(1)
+
+    def get_info_string(self):
+        return ';'.join(['='.join((k, self.info[k])) for k in self.info.keys()])
+
+    def get_format_string(self):
+        return ':'.join(fmt.id for fmt in self.format_list)
+
+    def genotype(self, sample_name):
+        if sample_name in self.sample_list:
+            return self.gts[sample_name]
+        else:
+            sys.stderr.write('\nError: invalid sample name, \"' + sample_name + '\"\n')            
+
+class Genotype(object):
+    def __init__(self, variant, sample_name):
+        self.GT = str
+        # self.GQ = float
+
+    def get_gt_string(self):
+        return ':'.join([self.GT])
+
+    # def get_format_string(self):
+        
 
 # primary function
-def make_vcf(bedpe_file, vcf_out):
-    make_vcf_header(vcf_out)
+def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
+    # parse the sample config file
+    sample_info = dict()
+    sample_set = set()
+    for l in config:
+        v = l.rstrip().split('\t')
+        name = v[0]
+        sample_id = v[1]
+        data_type = v[2]
+        sample_info[sample_id] = [name, data_type]
+        sample_set.add(name)
+
+    # Create a new VCF object
+    myvcf = Vcf(fasta)
+    for s in sample_set:
+        myvcf.add_sample(s)
+
+    # write header
+    vcf_out.write(myvcf.get_header() + '\n')
 
     for line in bedpe_file:
         bedpe = Bedpe(line.rstrip().split('\t'))
-        
-        # VCF INFO field
-        info = dict()
-        info['SVTYPE'] = str(bedpe.svtype)
-        info['END'] = str(bedpe.b2 - 1) # (VCF 4.2 spec: POS + length of REF allele - 1)
+        var = Variant(myvcf, bedpe.c1, bedpe.b1, '.')
+
+        # set VCF info elements
+        var.set_info('SVTYPE', str(bedpe.svtype))
+        var.set_info('END', str(bedpe.b2 - 1)) # (VCF 4.2 spec: POS + length of REF allele - 1)
         if bedpe.svtype == 'DEL':
-            info['SVLEN'] = str(-1*((bedpe.b2 - 1) - bedpe.b1))
+            var.set_info('SVLEN', str(-1*((bedpe.b2 - 1) - bedpe.b1)))
         else:
-            info['SVLEN'] = str((bedpe.b2 - 1) - bedpe.b1)
-        info['CIPOS'] = ','.join(map(str, [(bedpe.s1 + 1) - bedpe.b1, bedpe.e1 - bedpe.b1]))
-        info['CIEND'] = ','.join(map(str, [(bedpe.s2 + 1) - bedpe.b2, bedpe.e2 - bedpe.b2]))
-        info['CIPOS95'] = ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1]))
-        info['CIEND95'] = ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2]))
+            var.set_info('SVLEN', str((bedpe.b2 - 1) - bedpe.b1))
+        var.set_info('CIPOS', ','.join(map(str, [(bedpe.s1 + 1) - bedpe.b1, bedpe.e1 - bedpe.b1])))
+        var.set_info('CIEND', ','.join(map(str, [(bedpe.s2 + 1) - bedpe.b2, bedpe.e2 - bedpe.b2])))
+        var.set_info('CIPOS95', ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1])))
+        var.set_info('CIEND95', ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2])))
+        # var.set_info('IMPRECISE', 'True')
 
-        info_string =  ';'.join(['='.join((k, info[k])) for k in info.keys()])
+        # get samples with variant
+        var_samples = set()
+        for s_id in bedpe.sample_ids:
+            var_samples.add(sample_info[s_id][0])
 
-        format = dict()
-        # format
+        for s in sample_set:
+            if s in var_samples:
+                var.genotype(s).GT = '0/1'
+            else:
+                var.genotype(s).GT = '0/0'
+
+        base = str(fasta.fetch(var.chrom, var.pos - 1, var.pos))
+        print var.chrom, var.pos, fasta.fetch(var.chrom, var.pos - 1, var.pos), base
+
+        base = str(fasta.fetch(var.chrom, var.pos - 1, var.pos))
+        base = str(fasta.fetch(var.chrom, '%s:%s-%s' % (var.chrom, var.pos - 1, var.pos)))
+        print base
 
 
-        # print bedpe.c1, bedpe.b1, bedpe.b1
+        # write the record to the VCF output file
         vcf_out.write( '\t'.join(map(str,[
-                        bedpe.c1,
-                        bedpe.b1,
-                        bedpe.name,
-                        'N',
-                        '<' + bedpe.svtype + '>',
-                        bedpe.phred,
-                        '.',
-                        info_string
-                        
-                        ])) + '\n' )
-        
+            var.chrom,
+            var.pos,
+            var.var_id,
+            str(fasta.fetch(var.chrom, var.pos - 1, var.pos)),
+            '<' + var.info['SVTYPE'] + '>',
+            bedpe.phred,
+            '.',
+            var.get_info_string(),
+            var.get_format_string(),
+            ':'.join(var.genotype(s).get_gt_string() for s in sample_set)
+        ])) + '\n')
+
     # close the VCF output file
     vcf_out.close()
     
@@ -183,10 +308,11 @@ def main():
     args = get_args()
 
     # call primary function
-    make_vcf(args.bedpe, args.output)
+    bedpeToVcf(args.bedpe, args.output, args.sample_config, args.fasta)
 
-    # close the input file
+    # close the files
     args.bedpe.close()
+    args.fasta.close()
 
 # initialize the script
 if __name__ == '__main__':
