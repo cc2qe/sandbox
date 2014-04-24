@@ -89,6 +89,7 @@ class Bedpe(object):
 class Vcf(object):
     def __init__(self, fasta):
         self.file_format = 'VCFv4.2'
+        self.fasta = fasta
         self.reference = fasta.filename
         self.sample_list = []
         self.info_list = []
@@ -100,11 +101,14 @@ class Vcf(object):
         self.add_info('END', 1, 'Integer', 'End position of the variant described in this record')
         self.add_info('SVLEN', '.', 'Integer', 'Difference in length between REF and ALT alleles')
         self.add_info('IMPRECISE', 0, 'Flag', 'Imprecise structural variation')
-        self.add_info('CIEND', 2, 'Integer', 'Confidence interval around END for imprecise variants')
         self.add_info('CIPOS', 2, 'Integer', 'Confidence interval around POS for imprecise variants')
-        self.add_info('CIEND95', 2, 'Integer', '95% confidence interval around END for imprecise variants')
+        self.add_info('CIEND', 2, 'Integer', 'Confidence interval around END for imprecise variants')
         self.add_info('CIPOS95', 2, 'Integer', '95% confidence interval around POS for imprecise variants')
+        self.add_info('CIEND95', 2, 'Integer', '95% confidence interval around END for imprecise variants')
         self.add_info('BKPTID', '.', 'String', 'ID of the assembled alternate allele in the assembly file')
+        self.add_info('PARID', 1, 'String', 'ID of partner breakend')
+        self.add_info('MATEID', '.', 'String', 'ID of mate breakends')
+        self.add_info('EVENT', 1, 'String', 'ID of event associated to breakend')
         self.add_info('HOMLEN', '.', 'Integer', 'Length of base pair identical micro-homology at event breakpoints')
         self.add_info('HOMSEQ', '.', 'String', 'Sequence of base pair identical micro-homology at event breakpoints')
         self.add_info('SOMATIC', 0, 'Flag', 'Somatic mutation')
@@ -189,11 +193,15 @@ class Format(object):
         self.hstring = '##FORMAT=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
 
 class Variant(object):
-    def __init__(self, vcf_file, chrom, pos, var_id):
+    def __init__(self, vcf_file, chrom, pos, ref, alt, var_id, qual):
         self.vcf = vcf_file
         self.chrom = chrom
         self.pos = pos
+        self.ref = ref
+        self.alt = alt
         self.var_id = var_id
+        self.qual = qual
+        self.filter = '.'
         self.sample_list = vcf_file.sample_list
         self.info_list = vcf_file.info_list
         self.info = dict()
@@ -235,6 +243,22 @@ class Variant(object):
             return self.gts[sample_name]
         else:
             sys.stderr.write('\nError: invalid sample name, \"' + sample_name + '\"\n')            
+
+    def get_var_string(self):
+        s = '\t'.join(map(str,[
+            self.chrom,
+            self.pos,
+            self.var_id,
+            self.ref,
+            self.alt,
+            '%0.2f' % self.qual,
+            self.filter,
+            self.get_info_string(),
+            self.get_format_string(),
+            '\t'.join(self.genotype(s).get_gt_string() for s in self.sample_list)
+        ]))
+
+        return s
 
 class Genotype(object):
     def __init__(self, variant, sample_name):
@@ -283,44 +307,118 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
     # parse the bedpe data
     for line in bedpe_file:
         bedpe = Bedpe(line.rstrip().split('\t'))
-        var = Variant(myvcf, bedpe.c1, bedpe.b1, '.')
 
-        # set VCF info elements
-        var.set_info('SVTYPE', str(bedpe.svtype))
-        var.set_info('END', str(bedpe.b2 - 1)) # (VCF 4.2 spec: POS + length of REF allele - 1)
-        if bedpe.svtype == 'DEL':
-            var.set_info('SVLEN', str(-1*((bedpe.b2 - 1) - bedpe.b1)))
+        # special case to deal with breakends. each BEDPE line spawn 2 VCF variant records
+        if bedpe.svtype == 'BND':
+            # print line.rstrip()
+            var1 = Variant(myvcf,
+                           bedpe.c1,
+                           bedpe.b1,
+                           fasta.fetch(bedpe.c1, bedpe.b1 - 1, bedpe.b1),
+                           '<' + str(bedpe.svtype) + '>',
+                           bedpe.name + '_1',
+                           bedpe.phred
+                       )
+
+            var1.set_info('SVTYPE', str(bedpe.svtype))
+            var1.set_info('MATEID', bedpe.name + '_2')
+            var1.set_info('CIPOS', ','.join(map(str, [(bedpe.s1 + 1) - bedpe.b1, bedpe.e1 - bedpe.b1])))
+            var1.set_info('CIEND', ','.join(map(str, [(bedpe.s2 + 1) - bedpe.b2, bedpe.e2 - bedpe.b2])))
+            var1.set_info('CIPOS95', ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1])))
+            var1.set_info('CIEND95', ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2])))
+            var1.set_info('IMPRECISE', 'True')
+
+            if bedpe.o1 == '+':
+                if bedpe.o2 == '-':
+                    var1.alt = '%s[%s:%s[' % (var1.ref, bedpe.c2, bedpe.b2)
+                elif bedpe.o2 == '+':
+                    var1.alt = '%s]%s:%s]' % (var1.ref, bedpe.c2, bedpe.b2)
+            elif bedpe.o1 == '-':
+                if bedpe.o2 == '+':
+                    var1.alt = ']%s:%s]%s' % (bedpe.c2, bedpe.b2, var1.ref)
+                elif bedpe.o2 == '-':
+                    var1.alt = '[%s:%s[%s' % (bedpe.c2, bedpe.b2, var1.ref)
+
+            var2 = Variant(myvcf,
+                           bedpe.c2,
+                           bedpe.b2,
+                           fasta.fetch(bedpe.c2, bedpe.b2 - 1, bedpe.b2),
+                           '<' + str(bedpe.svtype) + '>',
+                           bedpe.name + '_2',
+                           bedpe.phred
+                       )
+            var2.set_info('SVTYPE', str(bedpe.svtype))
+            var2.set_info('MATEID', bedpe.name + '_1')
+            var2.set_info('CIPOS', ','.join(map(str, [(bedpe.s2 + 1) - bedpe.b2, bedpe.e2 - bedpe.b2])))
+            var2.set_info('CIEND', ','.join(map(str, [(bedpe.s1 + 1) - bedpe.b1, bedpe.e1 - bedpe.b1])))
+            var2.set_info('CIPOS95', ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2])))
+            var2.set_info('CIEND95', ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1])))
+            var2.set_info('IMPRECISE', 'True')
+            if bedpe.o2 == '+':
+                if bedpe.o1 == '-':
+                    var2.alt = '%s[%s:%s[' % (var2.ref, bedpe.c1, bedpe.b1)
+                elif bedpe.o1 == '+':
+                    var2.alt = '%s]%s:%s]' % (var2.ref, bedpe.c2, bedpe.b2)
+            elif bedpe.o2 == '-':
+                if bedpe.o1 == '+':
+                    var2.alt = ']%s:%s]%s' % (bedpe.c2, bedpe.b2, var2.ref)
+                elif bedpe.o1 == '-':
+                    var2.alt = '[%s:%s[%s' % (bedpe.c2, bedpe.b2, var2.ref)
+
+
+
+            # get samples with variant
+            var_samples = set()
+            for s_id in bedpe.sample_ids:
+                var_samples.add(sample_info[s_id][0])
+            for s in sample_set:
+                if s in var_samples:
+                    var1.genotype(s).set_format('GT', '0/1')
+                    var2.genotype(s).set_format('GT', '0/1')
+                else:
+                    var1.genotype(s).set_format('GT', '0/0')
+                    var2.genotype(s).set_format('GT', '0/0')
+
+            # write the record to the VCF output file
+            vcf_out.write(var1.get_var_string() + '\n')
+            vcf_out.write(var2.get_var_string() + '\n')
+
         else:
-            var.set_info('SVLEN', str((bedpe.b2 - 1) - bedpe.b1))
-        var.set_info('CIPOS', ','.join(map(str, [(bedpe.s1 + 1) - bedpe.b1, bedpe.e1 - bedpe.b1])))
-        var.set_info('CIEND', ','.join(map(str, [(bedpe.s2 + 1) - bedpe.b2, bedpe.e2 - bedpe.b2])))
-        var.set_info('CIPOS95', ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1])))
-        var.set_info('CIEND95', ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2])))
-        var.set_info('IMPRECISE', 'True')
+            # set VCF info elements for simple events
+            var = Variant(myvcf,
+                          bedpe.c1,
+                          bedpe.b1,
+                          fasta.fetch(bedpe.c1, bedpe.b1 - 1, bedpe.b1),
+                          '<' + str(bedpe.svtype) + '>',
+                          bedpe.name,
+                          bedpe.phred
+                      )
 
-        # get samples with variant
-        var_samples = set()
-        for s_id in bedpe.sample_ids:
-            var_samples.add(sample_info[s_id][0])
-        for s in sample_set:
-            if s in var_samples:
-                var.genotype(s).set_format('GT', '0/1')
+            var.set_info('SVTYPE', str(bedpe.svtype))
+            var.alt = '<' + str(bedpe.svtype) + '>'
+            var.set_info('END', str(bedpe.b2 - 1)) # (VCF 4.2 spec: POS + length of REF allele - 1)
+            if bedpe.svtype == 'DEL':
+                var.set_info('SVLEN', str(-1*((bedpe.b2 - 1) - bedpe.b1)))
             else:
-                var.genotype(s).set_format('GT', '0/0')
+                var.set_info('SVLEN', str((bedpe.b2 - 1) - bedpe.b1))
+            var.set_info('CIPOS', ','.join(map(str, [(bedpe.s1 + 1) - bedpe.b1, bedpe.e1 - bedpe.b1])))
+            var.set_info('CIEND', ','.join(map(str, [(bedpe.s2 + 1) - bedpe.b2, bedpe.e2 - bedpe.b2])))
+            var.set_info('CIPOS95', ','.join(map(str, [bedpe.ci95_s1 - bedpe.b1, bedpe.ci95_e1 - bedpe.b1])))
+            var.set_info('CIEND95', ','.join(map(str, [bedpe.ci95_s2 - bedpe.b2, bedpe.ci95_e2 - bedpe.b2])))
+            var.set_info('IMPRECISE', 'True')
 
-        # write the record to the VCF output file
-        vcf_out.write( '\t'.join(map(str,[
-            var.chrom,
-            var.pos,
-            var.var_id,
-            fasta.fetch(var.chrom, var.pos - 1, var.pos),
-            '<' + var.info['SVTYPE'] + '>',
-            '%0.2f' % bedpe.phred,
-            '.',
-            var.get_info_string(),
-            var.get_format_string(),
-            '\t'.join(var.genotype(s).get_gt_string() for s in sample_set)
-        ])) + '\n')
+            # get samples with variant
+            var_samples = set()
+            for s_id in bedpe.sample_ids:
+                var_samples.add(sample_info[s_id][0])
+            for s in sample_set:
+                if s in var_samples:
+                    var.genotype(s).set_format('GT', '0/1')
+                else:
+                    var.genotype(s).set_format('GT', '0/0')
+
+            # write the record to the VCF output file
+            vcf_out.write(var.get_var_string() + '\n')
 
     # close the VCF output file
     vcf_out.close()
