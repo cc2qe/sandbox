@@ -42,56 +42,57 @@ description: Convert a LUMPY bedpe file to VCF")
 
 class Bedpe(object):
         def __init__(self, bedList):
-                self.c1 = bedList[0]
-                self.s1 = int(bedList[1])
-                self.e1 = int(bedList[2])
-                self.c2 = bedList[3]
-                self.s2 = int(bedList[4])
-                self.e2 = int(bedList[5])
-                self.name = bedList[6]
-                self.score = float(bedList[7])
-                self.o1 = bedList[8]
-                self.o2 = bedList[9]
+            self.c1 = bedList[0]
+            self.s1 = int(bedList[1])
+            self.e1 = int(bedList[2])
+            self.c2 = bedList[3]
+            self.s2 = int(bedList[4])
+            self.e2 = int(bedList[5])
+            self.name = bedList[6]
+            self.score = float(bedList[7])
+            self.o1 = bedList[8]
+            self.o2 = bedList[9]
+            self.misc = bedList[10:]
 
-                # -------------------------------------------
-                # LUMPY specific attributes below
 
-                # Phred quality score
-                if self.score == 0:
-                    self.phred = float(5000) # arbitrarily setting 5000 as the phred score of LUMPY vars with p-value of 0
-                elif self.score == float('Inf'):
-                    self.phred = float(0)
-                else:
-                    self.phred = -10 * math.log(self.score, 10)
+        # parse LUMPY specific attributes
+        def parse_lumpy(self):
+            # Phred quality score
+            if self.score == 0:
+                self.phred = float(5000) # arbitrarily setting 5000 as the phred score of LUMPY vars with p-value of 0
+            elif self.score == float('Inf'):
+                self.phred = float(0)
+            else:
+                self.phred = -10 * math.log(self.score, 10)
 
-                # get svtype based on strand orientation
-                if self.c1 == self.c2:
-                    if self.o1 == '+' and self.o2 == '-':
-                        self.svtype = 'DEL'
-                    elif self.o1 == '-' and self.o2 == '+':
-                        self.svtype = 'DUP'
-                    elif self.o1 == self.o2:
-                        self.svtype = 'INV'
-                else:
-                    self.svtype = 'BND'
+            # get svtype based on strand orientation
+            if self.c1 == self.c2:
+                if self.o1 == '+' and self.o2 == '-':
+                    self.svtype = 'DEL'
+                elif self.o1 == '-' and self.o2 == '+':
+                    self.svtype = 'DUP'
+                elif self.o1 == self.o2:
+                    self.svtype = 'INV'
+            else:
+                self.svtype = 'BND'
 
-                # get the max probability breakend locations
-                self.b1, self.b2 = map(int,[a.split(':')[1] for a in bedList[13][4:].split(';')])
+            # get the max probability breakend locations
+            self.b1, self.b2 = map(int,[a.split(':')[1] for a in self.misc[3][4:].split(';')])
 
-                # get the 95% confidence interval
-                ci95_1, ci95_2 = [a.split(':')[1] for a in bedList[14][3:].split(';')]
-                self.ci95_s1, self.ci95_e1 = map(int,ci95_1.split('-'))
-                self.ci95_s2, self.ci95_e2 = map(int,ci95_2.split('-'))
+            # get the 95% confidence interval
+            ci95_1, ci95_2 = [a.split(':')[1] for a in self.misc[4][3:].split(';')]
+            self.ci95_s1, self.ci95_e1 = map(int,ci95_1.split('-'))
+            self.ci95_s2, self.ci95_e2 = map(int,ci95_2.split('-'))
 
-                # get variant samples
-                self.sample_ids = [b[0] for b in [a.split(',') for a in bedList[11][4:].split(';')]]
+            # get variant samples
+            self.sample_ids = [b[0] for b in [a.split(',') for a in self.misc[1][4:].split(';')]]
 
-                # get evidence amount for each sample id
-                self.id_evidence = dict()
-                s = [b[0] for b in [a.split(',') for a in bedList[11][4:].split(';')]]
-                e = map(int,[b[1] for b in [a.split(',') for a in bedList[11][4:].split(';')]])
-                for i in range(len(s)):
-                    self.id_evidence[s[i]] = e[i]
+            # get evidence amount for each sample id
+            self.id_evidence = dict()
+            s = [b[0] for b in [a.split(',') for a in self.misc[1][4:].split(';')]]
+            e = map(int,[b[1] for b in [a.split(',') for a in self.misc[1][4:].split(';')]])
+            for i in range(len(s)):
+                self.id_evidence[s[i]] = e[i]
 
 class Vcf(object):
     def __init__(self, fasta):
@@ -244,7 +245,7 @@ class Variant(object):
                 if info_field.type == 'Flag':
                     i_list.append(info_field.id)
                 else:
-                    i_list.append(info_field.id + '=' + self.info[info_field.id])
+                    i_list.append('%s=%s' % (info_field.id, self.info[info_field.id]))
 
         return ';'.join(i_list)
 
@@ -313,18 +314,19 @@ def get_sample_support(sample_info, id_evidence):
 def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
     # parse the sample config file
     sample_info = dict()
-    sample_set = set()
+    sample_list = list()
     for l in config:
         v = l.rstrip().split('\t')
         name = v[0]
         sample_id = v[1]
         data_type = v[2]
         sample_info[sample_id] = [name, data_type]
-        sample_set.add(name)
+        if name not in sample_list:
+            sample_list.append(name)
 
     # Create a new VCF object
     myvcf = Vcf(fasta)
-    for s in sample_set:
+    for s in sample_list:
         myvcf.add_sample(s)
 
     # write header
@@ -333,6 +335,7 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
     # parse the bedpe data
     for line in bedpe_file:
         bedpe = Bedpe(line.rstrip().split('\t'))
+        bedpe.parse_lumpy()
 
         # special case to deal with breakends. each BEDPE line spawn 2 VCF variant records
         if bedpe.svtype == 'BND':
@@ -393,17 +396,57 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
                 elif bedpe.o1 == '-':
                     var2.alt = '[%s:%s[%s' % (bedpe.c1, bedpe.b1, var2.ref)
 
-            # get samples with variant
-            var_samples = set()
-            for s_id in bedpe.sample_ids:
-                var_samples.add(sample_info[s_id][0])
-            for s in sample_set:
-                if s in var_samples:
-                    var1.genotype(s).set_format('GT', '0/1')
-                    var2.genotype(s).set_format('GT', '0/1')
+            # get PE and SR support for each sample
+            for s_id in sample_info:
+                g1 = var1.genotype(sample_info[s_id][0])
+                g2 = var2.genotype(sample_info[s_id][0])
+                if sample_info[s_id][1] == 'PE':
+                    if s_id in bedpe.id_evidence.keys():
+                        g1.set_format('PE', bedpe.id_evidence[s_id])
+                        g2.set_format('PE', bedpe.id_evidence[s_id])
+                    else:
+                        g1.set_format('PE', 0)
+                        g2.set_format('PE', 0)
+                elif sample_info[s_id][1] == 'SR':
+                    if s_id in bedpe.id_evidence.keys():
+                        g1.set_format('SR', bedpe.id_evidence[s_id])
+                        g2.set_format('SR', bedpe.id_evidence[s_id])
+                    else:
+                        g1.set_format('SR', 0)
+                        g2.set_format('SR', 0)
+            # get the PE + SR support and set the genotype
+            for s in sample_list:
+                g1 = var1.genotype(s)
+                g2 = var2.genotype(s)
+                g1.set_format('SUP', g1.get_format('PE') + g1.get_format('SR'))
+                g2.set_format('SUP', g2.get_format('PE') + g2.get_format('SR'))
+                if g1.get_format('SUP') > 0:
+                    g1.set_format('GT', '0/1')
+                    g2.set_format('GT', '0/1')
                 else:
-                    var1.genotype(s).set_format('GT', '0/0')
-                    var2.genotype(s).set_format('GT', '0/0')
+                    g1.set_format('GT', '0/0')
+                    g2.set_format('GT', '0/0')
+
+            # get PE and SR support for the variant
+            sum_pe = sum((var1.genotype(s).get_format('PE') for s in sample_list))
+            sum_sr = sum((var1.genotype(s).get_format('SR') for s in sample_list))
+            var1.set_info('PESUP', sum_pe)
+            var1.set_info('SRSUP', sum_sr)
+            var1.set_info('SUP', sum_pe + sum_sr)
+            var2.set_info('PESUP', sum_pe)
+            var2.set_info('SRSUP', sum_sr)
+            var2.set_info('SUP', sum_pe + sum_sr)
+            if sum_pe > 0:
+                if sum_sr > 0:
+                    var1.set_info('EVTYPE', 'PE_SR')
+                    var2.set_info('EVTYPE', 'PE_SR')
+                else:
+                    var1.set_info('EVTYPE', 'PE_ALONE')
+                    var2.set_info('EVTYPE', 'PE_ALONE')
+            elif sum_sr > 0:
+                var1.set_info('EVTYPE', 'SR_ALONE')
+                var2.set_info('EVTYPE', 'SR_ALONE')
+
 
             # write the record to the VCF output file
             vcf_out.write(var1.get_var_string() + '\n')
@@ -435,31 +478,9 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
             var.set_info('EVENT', bedpe.name)
             var.set_info('SUP', str(sum(bedpe.id_evidence.values())))
 
-            pe_support = 0
-            sr_support = 0
-            for i in bedpe.id_evidence:
-                if sample_info[i][1] == 'PE':
-                    pe_support += bedpe.id_evidence[i]
-                elif sample_info[i][1] == 'SR':
-                    sr_support += bedpe.id_evidence[i]
-            var.set_info('PESUP', str(pe_support))
-            var.set_info('SRSUP', str(sr_support))
-
-            if pe_support > 0:
-                if sr_support > 0:
-                    var.set_info('EVTYPE', 'PE_SR')
-                else:
-                    var.set_info('EVTYPE', 'PE_ALONE')
-            elif sr_support > 0:
-                var.set_info('EVTYPE', 'SR_ALONE')
-
-            # get samples with variant
-            var_samples = set()
+            # get PE and SR support for each sample
             for s_id in sample_info:
-                s_name = sample_info[s_id][0]
-                #var_samples.add(s_name)
-                g = var.genotype(s_name)
-
+                g = var.genotype(sample_info[s_id][0])
                 if sample_info[s_id][1] == 'PE':
                     if s_id in bedpe.id_evidence.keys():
                         g.set_format('PE', bedpe.id_evidence[s_id])
@@ -470,14 +491,29 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
                         g.set_format('SR', bedpe.id_evidence[s_id])
                     else:
                         g.set_format('SR', 0)
-
-            for s in sample_set:
+            # get the PE + SR support and set the genotype
+            for s in sample_list:
                 g = var.genotype(s)
                 g.set_format('SUP', g.get_format('PE') + g.get_format('SR'))
                 if g.get_format('SUP') > 0:
                     g.set_format('GT', '0/1')
                 else:
                     g.set_format('GT', '0/0')
+
+            # get PE and SR support for the variant
+            sum_pe = sum((var.genotype(s).get_format('PE') for s in sample_list))
+            sum_sr = sum((var.genotype(s).get_format('SR') for s in sample_list))
+            var.set_info('PESUP', sum_pe)
+            var.set_info('SRSUP', sum_sr)
+            var.set_info('SUP', sum_pe + sum_sr)
+            if sum_pe > 0:
+                if sum_sr > 0:
+                    var.set_info('EVTYPE', 'PE_SR')
+                else:
+                    var.set_info('EVTYPE', 'PE_ALONE')
+            elif sum_sr > 0:
+                var.set_info('EVTYPE', 'SR_ALONE')
+
 
             # write the record to the VCF output file
             vcf_out.write(var.get_var_string() + '\n')
