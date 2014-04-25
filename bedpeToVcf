@@ -238,6 +238,9 @@ class Variant(object):
             sys.stderr.write('\nError: invalid INFO field, \"' + field + '\"\n')
             exit(1)
 
+    def get_info(self, field):
+        return self.info[field]
+
     def get_info_string(self):
         i_list = list()
         for info_field in self.info_list:
@@ -447,6 +450,9 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
                 var1.set_info('EVTYPE', 'SR_ALONE')
                 var2.set_info('EVTYPE', 'SR_ALONE')
 
+            # set the QUAL as the total support
+            var1.qual = var1.get_info('SUP')
+            var2.qual = var2.get_info('SUP')
 
             # write the record to the VCF output file
             vcf_out.write(var1.get_var_string() + '\n')
@@ -514,6 +520,8 @@ def bedpeToVcf(bedpe_file, vcf_out, config, fasta):
             elif sum_sr > 0:
                 var.set_info('EVTYPE', 'SR_ALONE')
 
+            # set the QUAL as the total support
+            var.qual = var.get_info('SUP')
 
             # write the record to the VCF output file
             vcf_out.write(var.get_var_string() + '\n')
