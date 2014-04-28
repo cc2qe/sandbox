@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import pysam
 import argparse, sys
 import math, time
 from argparse import RawTextHelpFormatter
@@ -18,11 +17,6 @@ bedpeToVcf\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: Convert a LUMPY bedpe file to VCF")
-    # parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
-    # parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
-    # parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
-    # parser.add_argument('-c', '--sample_config', type=argparse.FileType('r'), required=True, help='Tab delimited sample config file of NAME id TYPE\n(Example: NA12878 10  PE)')
-    # parser.add_argument('-f', '--fasta', type=pysam.Fastafile, required=True, help='Indexed fasta file of the reference genome')
     parser.add_argument('-v', '--vcf', type=argparse.FileType('r'), default=None, help='VCF input (default: stdin)')
     parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout, help='Output BEDPE to write (default: stdout)')
 
@@ -40,218 +34,11 @@ description: Convert a LUMPY bedpe file to VCF")
     # send back the user input
     return args
 
-class Bedpe(object):
-        def __init__(self, bedList):
-            self.c1 = bedList[0]
-            self.s1 = int(bedList[1])
-            self.e1 = int(bedList[2])
-            self.c2 = bedList[3]
-            self.s2 = int(bedList[4])
-            self.e2 = int(bedList[5])
-            self.name = bedList[6]
-            self.score = float(bedList[7])
-            self.o1 = bedList[8]
-            self.o2 = bedList[9]
-            self.misc = bedList[10:]
-
-        # parse LUMPY specific attributes
-        def parse_lumpy(self):
-            # Phred quality score
-            if self.score == 0:
-                self.phred = float(5000) # arbitrarily setting 5000 as the phred score of LUMPY vars with p-value of 0
-            elif self.score == float('Inf'):
-                self.phred = float(0)
-            else:
-                self.phred = -10 * math.log(self.score, 10)
-
-            # get svtype based on strand orientation
-            if self.c1 == self.c2:
-                if self.o1 == '+' and self.o2 == '-':
-                    self.svtype = 'DEL'
-                elif self.o1 == '-' and self.o2 == '+':
-                    self.svtype = 'DUP'
-                elif self.o1 == self.o2:
-                    self.svtype = 'INV'
-            else:
-                self.svtype = 'BND'
-
-            # get the max probability breakend locations
-            self.b1, self.b2 = map(int,[a.split(':')[1] for a in self.misc[3][4:].split(';')])
-
-            # get the 95% confidence interval
-            ci95_1, ci95_2 = [a.split(':')[1] for a in self.misc[4][3:].split(';')]
-            self.ci95_s1, self.ci95_e1 = map(int,ci95_1.split('-'))
-            self.ci95_s2, self.ci95_e2 = map(int,ci95_2.split('-'))
-
-            # get variant samples
-            self.sample_ids = [b[0] for b in [a.split(',') for a in self.misc[1][4:].split(';')]]
-
-            # get evidence amount for each sample id
-            self.id_evidence = dict()
-            s = [b[0] for b in [a.split(',') for a in self.misc[1][4:].split(';')]]
-            e = map(int,[b[1] for b in [a.split(',') for a in self.misc[1][4:].split(';')]])
-            for i in range(len(s)):
-                self.id_evidence[s[i]] = e[i]
-
-class Vcf(object):
-    def __init__(self, fasta):
-        self.file_format = 'VCFv4.2'
-        self.fasta = fasta
-        self.reference = fasta.filename
-        self.sample_list = []
-        self.info_list = []
-        self.format_list = []
-        self.alt_list = []
-
-        # add info fields
-        self.add_info('SVTYPE', 1, 'String', 'Type of structural variant')
-        self.add_info('SVLEN', '.', 'Integer', 'Difference in length between REF and ALT alleles')
-        self.add_info('END', 1, 'Integer', 'End position of the variant described in this record')
-        self.add_info('IMPRECISE', 0, 'Flag', 'Imprecise structural variation')
-        self.add_info('CIPOS', 2, 'Integer', 'Confidence interval around POS for imprecise variants')
-        self.add_info('CIEND', 2, 'Integer', 'Confidence interval around END for imprecise variants')
-        self.add_info('CIPOS95', 2, 'Integer', '95% confidence interval around POS for imprecise variants')
-        self.add_info('CIEND95', 2, 'Integer', '95% confidence interval around END for imprecise variants')
-        self.add_info('BKPTID', '.', 'String', 'ID of the assembled alternate allele in the assembly file')
-        self.add_info('PARID', 1, 'String', 'ID of partner breakend')
-        self.add_info('MATEID', '.', 'String', 'ID of mate breakends')
-        self.add_info('EVENT', 1, 'String', 'ID of event associated to breakend')
-        self.add_info('HOMLEN', '.', 'Integer', 'Length of base pair identical micro-homology at event breakpoints')
-        self.add_info('HOMSEQ', '.', 'String', 'Sequence of base pair identical micro-homology at event breakpoints')
-        self.add_info('SOMATIC', 0, 'Flag', 'Somatic mutation')
-
-        self.add_info('SUP', '.', 'Integer', 'Number of pieces of evidence supporting the variant across all samples')
-        self.add_info('PESUP', '.', 'Integer', 'Number of paired-end reads supporting the variant across all samples')
-        self.add_info('SRSUP', '.', 'Integer', 'Number of split reads supporting the variant across all samples')
-        self.add_info('EVTYPE', '.', 'String', 'Type of LUMPY evidence contributing to the variant call')
-
-
-        # add alt fields
-        self.add_alt('DEL', 'Deletion')
-        self.add_alt('DUP', 'Duplication')
-        self.add_alt('INV', 'Inversion')
-        self.add_alt('DUP:TANDEM', 'Tandem duplication')
-        self.add_alt('INS', 'Insertion of novel sequence')
-        self.add_alt('CNV', 'Copy number variable region')
-
-        # add format fields
-        self.add_format('GT', 1, 'String', 'Genotype')
-        self.add_format('SUP', 1, 'Integer', 'Number of pieces of evidence supporting the variant')
-        self.add_format('PE', 1, 'Integer', 'Number of paired-end reads supporting the variant')
-        self.add_format('SR', 1, 'Integer', 'Number of split reads supporting the variant')
-
-        self.add_format('GQ', 1, 'Float', 'Genotype quality')
-        self.add_format('DP', 1, 'Integer', 'Read depth')
-        self.add_format('CN', 1, 'Integer', 'Copy number genotype for imprecise events')
-        self.add_format('CNQ', 1, 'Float', 'Copy number genotype quality for imprecise events')
-        self.add_format('CNL', '.', 'Float', 'Copy number genotype likelihood form imprecise events')
-        self.add_format('NQ', 1, 'Integer', 'Phred style probability score that the variant is novel')
-        self.add_format('HAP', 1, 'Integer', 'Unique haplotype identifier')
-        self.add_format('AHAP', 1, 'Integer', 'Unique identifier of ancestral haplotype')
-
-class Info(object):
-    def __init__(self, id, number, type, desc):
-        self.id = str(id)
-        self.number = str(number)
-        self.type = str(type)
-        self.desc = str(desc)
-        self.hstring = '##INFO=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
-
-class Alt(object):
-    def __init__(self, id, desc):
-        self.id = str(id)
-        self.desc = str(desc)
-        self.hstring = '##ALT=<ID=' + self.id + ',Description=\"' + self.desc + '\">'
-
-class Format(object):
-    def __init__(self, id, number, type, desc):
-        self.id = str(id)
-        self.number = str(number)
-        self.type = str(type)
-        self.desc = str(desc)
-        self.hstring = '##FORMAT=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
-
-class Variant(object):
-    def __init__(self, vcf_file, chrom, pos, ref, alt, var_id, qual):
-        self.vcf = vcf_file
-        self.chrom = chrom
-        self.pos = pos
-        self.ref = ref
-        self.alt = alt
-        self.var_id = var_id
-        self.qual = qual
-        self.filter = '.'
-        self.sample_list = vcf_file.sample_list
-        self.info_list = vcf_file.info_list
-        self.info = dict()
-        self.format_list = vcf_file.format_list
-        self.active_formats = list()
-        self.gts = dict()
-
-        # make a genotype for each sample at variant
-        for s in self.sample_list:
-            self.gts[s] = Genotype(self, s)
-
-    def set_info(self, field, value):
-        if field in [i.id for i in self.info_list]:
-            self.info[field] = value
-        else:
-            sys.stderr.write('\nError: invalid INFO field, \"' + field + '\"\n')
-            exit(1)
-
-    def get_info_string(self):
-        i_list = list()
-        for info_field in self.info_list:
-            if info_field.id in self.info.keys():
-                if info_field.type == 'Flag':
-                    i_list.append(info_field.id)
-                else:
-                    i_list.append(info_field.id + '=' + self.info[info_field.id])
-
-        return ';'.join(i_list)
-
-    def get_format_string(self):
-        f_list = list()
-        for f in self.format_list:
-            if f.id in self.active_formats:
-                f_list.append(f.id)
-        return ':'.join(f_list)
-
-    def genotype(self, sample_name):
-        if sample_name in self.sample_list:
-            return self.gts[sample_name]
-        else:
-            sys.stderr.write('\nError: invalid sample name, \"' + sample_name + '\"\n')            
-
-    def get_var_string(self):
-        s = '\t'.join(map(str,[
-            self.chrom,
-            self.pos,
-            self.var_id,
-            self.ref,
-            self.alt,
-            '%0.2f' % self.qual,
-            self.filter,
-            self.get_info_string(),
-            self.get_format_string(),
-            '\t'.join(self.genotype(s).get_gt_string() for s in self.sample_list)
-        ]))
-        return s
-
 class Genotype(object):
     def __init__(self, variant, sample_name):
         self.format = dict()
         self.variant = variant
-        self.set_format('GT', './.')
-        
-    def set_format(self, field, value):
-        if field in [i.id for i in self.variant.format_list]:
-            self.format[field] = value
-            if field not in self.variant.active_formats:
-                self.variant.active_formats.append(field)
-        else:
-            sys.stderr.write('\nError: invalid FORMAT field, \"' + field + '\"\n')
-            exit(1)
+
     
     def get_format(self, field):
         return self.format[field]
@@ -267,51 +54,240 @@ class Genotype(object):
                 g_list.append('.')
         return ':'.join(map(str,g_list))
 
-def get_sample_support(sample_info, id_evidence):
-    
-    return
+class Variant(object):
+    def __init__(self, var_list, sample_list):
+        self.chrom = var_list[0]
+        self.pos = int(var_list[1])
+        self.var_id = var_list[2]
+        self.ref = var_list[3]
+        self.alt = var_list[4]
+        self.qual = var_list[5]
+        self.filter = var_list[6]
+        self.sample_list = sample_list
+
+        self.gts = dict()
+        # make a genotype for each sample at variant
+        for s in self.sample_list:
+            self.gts[s] = Genotype(self, s)        
+        
+        self.info = dict()
+        i_split = [a.split('=') for a in var_list[7].split(';')] # temp list of split info column
+        for i in i_split:
+            if len(i) == 1:
+                i.append(True)
+            self.info[i[0]] = i[1]
 
 # primary function
 def vcfToBedpe(vcf_file, bedpe_out):
     in_header = True
+
+    # list of BND variant lines that have not yet been matched.
+    unmatched = []
+
     for line in vcf_file:
         if in_header:
             if line[0] == '#':
                 if line[1] != '#':
                     sample_list = line.rstrip().split('\t')[9:]
+                continue
             else:
                 in_header = False
 
-        else:
-            v = line.rstrip().split('\t')
-            info_dict = dict()
-            i_split = [a.split('=') for a in v[7].split(';')] # temp list of split info column
-            for i in i_split:
-                if len(i) == 1:
-                    i.append(True)
-                info_dict[i[0]] = i[1]
+        # print line.rstrip()
+        v = line.rstrip().split('\t')
+
+        var = Variant(v, sample_list)
+
+        if var.info['SVTYPE'] != 'BND':
+            b1 = var.pos
+            b2 = int(var.info['END'])
+            name = v[2]
+            score = var.info['LUMPYQ']
+
+            strands = var.info['STR']
+            o1 = strands[0]
+            o2 = strands[1]
+
+            support = var.info['SUP']
+
+            span = map(int, var.info['CIPOS'].split(','))
+            s1 = b1 + span[0] - 1
+            e1 = b1 + span[1]
+
+            span = map(int, var.info['CIEND'].split(','))
+            s2 = b2 + span[0]
+            e2 = b2 + span[1] + 1
+
+            ispan = s2 - e1
+            ospan = e2 - s1
+
+            if ospan > 1000000:
+                svtype = 'DISTANT_'
+            else:
+                svtype = 'LOCAL_'
+
+            if o1 == '+':
+                if o2 == '-':
+                    svtype += 'DEL'
+                elif o2 == '+':
+                    svtype += 'INV'
+            elif o1 == '-':
+                if o2 == '+':
+                    svtype += 'DUP'
+                elif o2 == '-':
+                    svtype += 'INV'
+
+
+            evtype = var.info['EVTYPE']
+
             format_list = v[8].split(':')
+            sample_gt = dict()
+            var_sample_list = []
+            for i in range(len(sample_list)):
+                s = sample_list[i]
+                gt = v[9 + i]
+                format_dict = dict(zip(format_list, gt.split(':')))
+                format_dict['PE'] = int(format_dict['PE'])
+                format_dict['SR'] = int(format_dict['SR'])
+                format_dict['SUP'] = int(format_dict['SUP'])
+                if format_dict['SUP'] > 0:
+                    var_sample_list.append(sample_list[i])
+                sample_gt[s] = format_dict
 
-            c1 = v[0]
-            b1 = int(v[1])
-            #print info_dict['CIPOS']
-            ci = map(int, info_dict['CIPOS'].split(','))
-            s1 = b1 + ci[0] - 1
-            s2 = b1 + ci[1]
+            gt_string = '\t'.join(['\t'.join(map(str,
+                                                 (sample_gt[s]['SUP'],
+                                                  sample_gt[s]['PE'],
+                                                  sample_gt[s]['SR'])
+                                             )) for s in sample_list])
 
-            print '\t'.join(map(str,
-                                [c1,
-                                 s1,
-                                 s2,
-                             ]))
-            
+            bedpe_out.write('\t'.join(map(str,
+                                          [var.chrom,
+                                           s1,
+                                           e1,
+                                           var.chrom,
+                                           s2,
+                                           e2,
+                                           name,
+                                           support,
+                                           o1,
+                                           o2,
+                                           svtype,
+                                           ispan,
+                                           ospan,
+                                           score,
+                                           ','.join(var_sample_list),
+                                           ','.join([','.join([s + '_' + ev + ':' + str(sample_gt[s][ev]) for ev in ('PE', 'SR') if sample_gt[s][ev] > 0]) for s in sample_list]),
+                                           strands,
+                                           evtype,
+                                           len(var_sample_list),
+                                           gt_string
+                                       ])) + '\n')
+
+        else:
+            if var.info['MATEID'] in [mate.var_id for mate in unmatched]:
+                if 'PRIN' in var.info.keys():
+                    prim = var
+                    sec = mate
+                elif 'PRIN' in mate.info.keys():
+                    prim = mate
+                    sec = var
+
+                b1 = prim.pos
+                b2 = sec.pos
+                score = prim.info['LUMPYQ']
+
+                strands = prim.info['STR']
+                o1 = strands[0]
+                o2 = strands[1]
+
+                support = prim.info['SUP']
+
+                span = map(int, prim.info['CIPOS'].split(','))
+                s1 = b1 + span[0] - 1
+                e1 = b1 + span[1]
+
+                span = map(int, sec.info['CIPOS'].split(','))
+                s2 = b2 + span[0]
+                e2 = b2 + span[1] + 1
+
+                ispan = s2 - e1
+                ospan = e2 - s1
+
+                if ospan > 1000000:
+                    svtype = 'DISTANT_'
+                else:
+                    svtype = 'LOCAL_'
+
+                if o1 == '+':
+                    if o2 == '-':
+                        svtype += 'DEL'
+                    elif o2 == '+':
+                        svtype += 'INV'
+                elif o1 == '-':
+                    if o2 == '+':
+                        svtype += 'DUP'
+                    elif o2 == '-':
+                        svtype += 'INV'
+
+
+                evtype = var.info['EVTYPE']
+
+                format_list = v[8].split(':')
+                sample_gt = dict()
+                var_sample_list = []
+                for i in range(len(sample_list)):
+                    s = sample_list[i]
+                    gt = v[9 + i]
+                    format_dict = dict(zip(format_list, gt.split(':')))
+                    format_dict['PE'] = int(format_dict['PE'])
+                    format_dict['SR'] = int(format_dict['SR'])
+                    format_dict['SUP'] = int(format_dict['SUP'])
+                    if format_dict['SUP'] > 0:
+                        var_sample_list.append(sample_list[i])
+                    sample_gt[s] = format_dict
+
+                gt_string = '\t'.join(['\t'.join(map(str,
+                                                     (sample_gt[s]['SUP'],
+                                                      sample_gt[s]['PE'],
+                                                      sample_gt[s]['SR'])
+                                                 )) for s in sample_list])
+
+
+                bedpe_out.write('\t'.join(map(str,
+                                              [prim.chrom,
+                                               s1,
+                                               e1,
+                                               sec.chrom,
+                                               s2,
+                                               e2,
+                                               prim.info['EVENT'],
+                                               support,
+                                               o1,
+                                               o2,
+                                               svtype,
+                                               ispan,
+                                               ospan,
+                                               score,
+                                               ','.join(var_sample_list),
+                                               ','.join([','.join([s + '_' + ev + ':' + str(sample_gt[s][ev]) for ev in ('PE', 'SR') if sample_gt[s][ev] > 0]) for s in sample_list]),
+                                               strands,
+                                               evtype,
+                                               len(var_sample_list),
+                                               gt_string
+                                           ])) + '\n')
+
+                unmatched.remove(mate)
+
+                
+            else:
+                unmatched.append(var)
 
     bedpe_out.close()
     
     return
 
 # --------------------------------------
-# main function
+# wrapper function
 
 def main():
     # parse the command line args
