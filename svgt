@@ -1,0 +1,211 @@
+#!/usr/bin/env python
+
+import pysam
+import argparse, sys
+import math, time
+from argparse import RawTextHelpFormatter
+
+__author__ = "Colby Chiang (cc2qe@virginia.edu)"
+__version__ = "$Revision: 0.0.1 $"
+__date__ = "$Date: 2014-04-28 14:31 $"
+
+# --------------------------------------
+# define functions
+
+def get_args():
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
+bedpeToVcf\n\
+author: " + __author__ + "\n\
+version: " + __version__ + "\n\
+description: Genotype structural variants based on breakpoint depth")
+    parser.add_argument('-i', '--input_vcf', type=argparse.FileType('r'), default=None, help='VCF input (default: stdin)')
+    parser.add_argument('-b', '--bam', type=str, required=True, help='BAM file(s), comma-separated if genotyping multiple BAMs')
+    parser.add_argument('-s', '--samples', type=str, required=False, help='Sample names of VCF header, comma-separated ')
+    parser.add_argument('-o', '--output_vcf', type=argparse.FileType('w'), default=sys.stdout, help='Output BEDPE to write (default: stdout)')
+
+    # parse the arguments
+    args = parser.parse_args()
+
+    # if no input, check if part of pipe and if so, read stdin.
+    if args.vcf == None:
+        if sys.stdin.isatty():
+            parser.print_help()
+            exit(1)
+        else:
+            args.vcf = sys.stdin
+
+    # send back the user input
+    return args
+
+class Vcf(object):
+    def __init__(self, fasta):
+        self.file_format = 'VCFv4.2'
+        self.fasta = fasta
+        self.reference = fasta.filename
+        self.sample_list = []
+        self.info_list = []
+        self.format_list = []
+        self.alt_list = []
+
+class Info(object):
+    def __init__(self, id, number, type, desc):
+        self.id = str(id)
+        self.number = str(number)
+        self.type = str(type)
+        self.desc = str(desc)
+        self.hstring = '##INFO=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
+
+class Alt(object):
+    def __init__(self, id, desc):
+        self.id = str(id)
+        self.desc = str(desc)
+        self.hstring = '##ALT=<ID=' + self.id + ',Description=\"' + self.desc + '\">'
+
+class Format(object):
+    def __init__(self, id, number, type, desc):
+        self.id = str(id)
+        self.number = str(number)
+        self.type = str(type)
+        self.desc = str(desc)
+        self.hstring = '##FORMAT=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
+
+class Variant(object):
+    def __init__(self, vcf_file, chrom, pos, ref, alt, var_id, qual):
+        self.vcf = vcf_file
+        self.chrom = chrom
+        self.pos = pos
+        self.ref = ref
+        self.alt = alt
+        self.var_id = var_id
+        self.qual = qual
+        self.filter = '.'
+        self.sample_list = vcf_file.sample_list
+        self.info_list = vcf_file.info_list
+        self.info = dict()
+        self.format_list = vcf_file.format_list
+        self.active_formats = list()
+        self.gts = dict()
+
+        # make a genotype for each sample at variant
+        for s in self.sample_list:
+            self.gts[s] = Genotype(self, s)
+
+    def set_info(self, field, value):
+        if field in [i.id for i in self.info_list]:
+            self.info[field] = value
+        else:
+            sys.stderr.write('\nError: invalid INFO field, \"' + field + '\"\n')
+            exit(1)
+
+    def get_info_string(self):
+        i_list = list()
+        for info_field in self.info_list:
+            if info_field.id in self.info.keys():
+                if info_field.type == 'Flag':
+                    i_list.append(info_field.id)
+                else:
+                    i_list.append(info_field.id + '=' + self.info[info_field.id])
+
+        return ';'.join(i_list)
+
+    def get_format_string(self):
+        f_list = list()
+        for f in self.format_list:
+            if f.id in self.active_formats:
+                f_list.append(f.id)
+        return ':'.join(f_list)
+
+    def genotype(self, sample_name):
+        if sample_name in self.sample_list:
+            return self.gts[sample_name]
+        else:
+            sys.stderr.write('\nError: invalid sample name, \"' + sample_name + '\"\n')            
+
+    def get_var_string(self):
+        s = '\t'.join(map(str,[
+            self.chrom,
+            self.pos,
+            self.var_id,
+            self.ref,
+            self.alt,
+            '%0.2f' % self.qual,
+            self.filter,
+            self.get_info_string(),
+            self.get_format_string(),
+            '\t'.join(self.genotype(s).get_gt_string() for s in self.sample_list)
+        ]))
+        return s
+
+class Genotype(object):
+    def __init__(self, variant, sample_name):
+        self.format = dict()
+        self.variant = variant
+        self.set_format('GT', './.')
+        
+    def set_format(self, field, value):
+        if field in [i.id for i in self.variant.format_list]:
+            self.format[field] = value
+            if field not in self.variant.active_formats:
+                self.variant.active_formats.append(field)
+        else:
+            sys.stderr.write('\nError: invalid FORMAT field, \"' + field + '\"\n')
+            exit(1)
+    
+    def get_format(self, field):
+        return self.format[field]
+
+    def get_gt_string(self):
+        g_list = list()
+
+        # need to make sure that the FORMAT output is in the same order as the VCF header
+        for f in [x for (y,x) in sorted(zip([f.id for f in self.variant.format_list], self.variant.active_formats))]:
+            if f in self.format:
+                g_list.append(self.format[f])
+            else:
+                g_list.append('.')
+        return ':'.join(map(str,g_list))
+
+def get_sample_support(sample_info, id_evidence):
+    
+    return
+
+# primary function
+def sv_genotype(vcf_file, bedpe_out):
+    in_header = True
+    for line in vcf_file:
+        if in_header:
+            if line[0] == '#':
+                if line[1] != '#':
+                    print line
+                    sample_list = line.rstrip().split('\t')[9:]
+            else:
+                in_header = False
+
+        else:
+            v = line.rstrip().split('\t')
+            chrom, start
+
+    bedpe_out.close()
+    
+    return
+
+# --------------------------------------
+# main function
+
+def main():
+    # parse the command line args
+    args = get_args()
+
+    # call primary function
+    sv_genotype(args.vcf, args.output)
+
+    # close the files
+    args.vcf.close()
+
+# initialize the script
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except IOError, e:
+        if e.errno != 32:  # ignore SIGPIPE
+            raise 
