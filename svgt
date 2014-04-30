@@ -45,7 +45,7 @@ class Vcf(object):
     def __init__(self):
         self.file_format = 'VCFv4.2'
         #self.fasta = fasta
-        #self.reference = fasta.filename
+        self.reference = ''
         self.sample_list = []
         self.info_list = []
         self.format_list = []
@@ -54,7 +54,11 @@ class Vcf(object):
 
     def add_header(self, header):
         for line in header:
-            if line.split('=')[0] == '##INFO':
+            if line.split('=')[0] == '##fileformat':
+                self.file_format = line.rstrip().split('=')[1]
+            elif line.split('=')[0] == '##reference':
+                self.reference = line.rstrip().split('=')[1]
+            elif line.split('=')[0] == '##INFO':
                 a = line[line.find('<')+1:line.find('>')]
                 r = re.compile(r'(?:[^,\"]|\"[^\"]*\")+')
                 self.add_info(*[b.split('=')[1] for b in r.findall(a)])
@@ -222,7 +226,10 @@ class Genotype(object):
         g_list = list()
         for f in self.variant.active_formats:
             if f in self.format:
-                g_list.append(self.format[f])
+                if type(self.format[f]) == float:
+                    g_list.append('%0.0f' % self.format[f])
+                else:
+                    g_list.append(self.format[f])
             else:
                 g_list.append('.')
         return ':'.join(map(str,g_list))
@@ -231,6 +238,13 @@ class Genotype(object):
 def choose(n, k):
     fact = math.factorial
     return fact(n) / fact(k) / fact(n-k)
+
+# phred scale a probability
+def phred(x):
+    if x == 0:
+        return 180
+    else:
+        return -10 * math.log(x, 10)
 
 # return the genotype and p-value
 def bayes_gt(ref, alt):
@@ -243,9 +257,7 @@ def bayes_gt(ref, alt):
     p_het = choose(total, alt) * p_alt[1]**alt * (1 - p_alt[1])**ref
     p_homalt = choose(total, alt) * p_alt[2]**alt * (1 - p_alt[2])**ref
 
-    p_all = sum((p_homref, p_het, p_homalt))
-
-    return [x / p_all for x in (p_homref, p_het, p_homalt)]
+    return (p_homref, p_het, p_homalt)
 
 # primary function
 def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
@@ -261,7 +273,7 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
         if in_header:
             if line[0] == '#':
                 header.append(line) 
-                vcf_out.write(line)
+                #vcf_out.write(line)
                 if line[1] != '#':
                     sample_list = line.rstrip().split('\t')[9:]
                 continue
@@ -270,6 +282,7 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
                 vcf.add_header(header)
                 vcf.add_format('RO', 1, 'Integer', 'Reference allele observation count, with partial observations recorded fractionally')
                 vcf.add_format('AO', 'A', 'Integer', 'Alternate allele observations, with partial observations recorded fractionally')
+                print vcf.get_header()
 
         v = line.rstrip().split('\t')
         var = Variant(v, vcf)
@@ -299,14 +312,12 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
             var.pos = breakend
             #print '\t'.join(map(str,(var.chrom, var.pos, ref_counter[breakend], spl_counter[breakend])))
             gt_plist = bayes_gt(ref_counter[breakend], spl_counter[breakend])
+            gt_idx = gt_plist.index(max(gt_plist[1:]))
+            var.qual = phred(gt_plist[0]/sum(gt_plist))
+            var.genotype(sample).set_format('GQ', phred(1 - gt_plist[gt_idx]/sum(gt_plist[1:])))
             var.genotype(sample).set_format('DP', spl_counter[breakend] + ref_counter[breakend])
             var.genotype(sample).set_format('AO', spl_counter[breakend])
             var.genotype(sample).set_format('RO', ref_counter[breakend])
-
-
-            gt_idx = gt_plist.index(max(gt_plist[1:]))
-            bayes_phred_q = -10 * math.log(gt_plist[0], 10)
-            var.qual = bayes_phred_q
             if gt_idx == 1:
                 var.genotype(sample).set_format('GT', '0/1')
             elif gt_idx == 2:
