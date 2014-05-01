@@ -241,15 +241,17 @@ def choose(n, k):
 
 # phred scale a probability
 def phred(x):
+    # if probability is zero, then set phred to 180, since python
+    # can hold up to 1e-17 for floats.
     if x == 0:
         return 180
     else:
-        return -10 * math.log(x, 10)
+        return max(-10 * math.log(x, 10), 0)
 
 # return the genotype and p-value
 def bayes_gt(ref, alt):
     # prob seeing an alt read with true genotype of of hom_ref, het, hom_alt respectively
-    p_alt = [0.1, 0.5, 0.8]
+    p_alt = [0.05, 0.5, 0.8]
 
     total = ref + alt
     
