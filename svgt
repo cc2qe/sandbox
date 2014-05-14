@@ -161,6 +161,13 @@ class Variant(object):
                 i.append(True)
             self.info[i[0]] = i[1]
 
+    def set_info(self, field, value):
+        if field in [i.id for i in self.info_list]:
+            self.info[field] = value
+        else:
+            sys.stderr.write('\nError: invalid INFO field, \"' + field + '\"\n')
+            exit(1)
+
     def get_info(self, field):
         return self.info[field]
 
@@ -291,35 +298,74 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
         o1, o2 =  list(var.info['STR'].split(',')[0].split(':')[0])
 
         
-        ref_counter = Counter()
-        spl_counter = Counter()
+        '''
+        Breakend A
+        '''
+
+        ref_counter_a = Counter()
+        spl_counter_a = Counter()
 
         for ref_read in bam.fetch(var.chrom, var.pos - padding, var.pos + padding + 1):
             if not ref_read.is_duplicate and not ref_read.is_unmapped:
                 for p in range(ref_read.pos + 1, ref_read.aend + 1):
                     if p - ref_read.pos >= splflank and ref_read.aend - p >= splflank:
-                        ref_counter[p] += 1
+                        ref_counter_a[p] += 1
 
         for spl_read in spl_bam.fetch(var.chrom, var.pos - padding, var.pos + padding + 1):
             if not spl_read.is_duplicate and not spl_read.is_unmapped:
                 #print spl_read.aend, spl_read
                 if o1 == '+' and spl_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
-                    spl_counter[spl_read.aend] += 1
+                    spl_counter_a[spl_read.aend] += 1
                 elif o1 == '-' and spl_read.cigar[-1][0] == 0:
-                    spl_counter[spl_read.pos + 1] += 1
+                    spl_counter_a[spl_read.pos + 1] += 1
 
-        if len(spl_counter) > 0:
-            breakend = spl_counter.most_common(1)[0][0]
+        # check whether the lumpy base matches my base
+        #vcf_out.write('%s\t' % var.pos)
+
+        '''
+        Breakend B
+        '''
+
+        ref_counter_b = Counter()
+        spl_counter_b = Counter()
+
+        end = int(var.get_info('END'))
+
+        for ref_read in bam.fetch(var.chrom, end - padding, end + padding + 1):
+            if not ref_read.is_duplicate and not ref_read.is_unmapped:
+                for p in range(ref_read.pos + 1, ref_read.aend + 1):
+                    if p - ref_read.pos >= splflank and ref_read.aend - p >= splflank:
+                        ref_counter_b[p] += 1
+
+        for spl_read in spl_bam.fetch(var.chrom, end - padding, end + padding + 1):
+            if not spl_read.is_duplicate and not spl_read.is_unmapped:
+                #print spl_read.aend, spl_read
+                if o1 == '+' and spl_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
+                    spl_counter_b[spl_read.aend] += 1
+                elif o1 == '-' and spl_read.cigar[-1][0] == 0:
+                    spl_counter_b[spl_read.pos + 1] += 1
+
+        # check whether the lumpy base matches my base
+        #vcf_out.write('%s\t' % var.pos)
+
+        if len(spl_counter_a) > 0:
+            breakend_a = spl_counter_a.most_common(1)[0][0]
             #print var.pos
-            var.pos = breakend
+            var.pos = breakend_a
             #print '\t'.join(map(str,(var.chrom, var.pos, ref_counter[breakend], spl_counter[breakend])))
-            gt_plist = bayes_gt(ref_counter[breakend], spl_counter[breakend])
+
+        if len(spl_counter_b) > 0:
+            breakend_b = spl_counter_b.most_common(1)[0][0]
+            var.set_info('END', breakend_b)
+
+        if len(spl_counter_a) + len(spl_counter_b) > 0:
+            gt_plist = bayes_gt(ref_counter_a[breakend_a] + ref_counter_b[breakend_b], spl_counter_a[breakend_a] + spl_counter_b[breakend_b])
             gt_idx = gt_plist.index(max(gt_plist[1:]))
             var.qual = phred(gt_plist[0]/sum(gt_plist))
             var.genotype(sample).set_format('GQ', phred(1 - gt_plist[gt_idx]/sum(gt_plist[1:])))
-            var.genotype(sample).set_format('DP', spl_counter[breakend] + ref_counter[breakend])
-            var.genotype(sample).set_format('AO', spl_counter[breakend])
-            var.genotype(sample).set_format('RO', ref_counter[breakend])
+            var.genotype(sample).set_format('DP', spl_counter_a[breakend_a] + ref_counter_a[breakend_a] + spl_counter_b[breakend_b] + ref_counter_b[breakend_b])
+            var.genotype(sample).set_format('AO', spl_counter_a[breakend_a] + spl_counter_b[breakend_b])
+            var.genotype(sample).set_format('RO', ref_counter_a[breakend_a] + ref_counter_b[breakend_b])
             if gt_idx == 1:
                 var.genotype(sample).set_format('GT', '0/1')
             elif gt_idx == 2:
