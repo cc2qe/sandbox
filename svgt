@@ -3,6 +3,7 @@
 import pysam
 import argparse, sys
 import math, time, re
+import multiprocessing
 from collections import Counter
 from argparse import RawTextHelpFormatter
 
@@ -27,6 +28,7 @@ description: Compute genotype of structural variants based on breakpoint depth")
     parser.add_argument('-S', '--split_bam', type=str, required=False, default=None, help='split-read bam file for sample')
     parser.add_argument('-s', '--samples', type=str, required=False, help='sample names of VCF header, comma-separated ')
     parser.add_argument('-o', '--output_vcf', type=argparse.FileType('w'), default=sys.stdout, help='output BEDPE to write (default: stdout)')
+    parser.add_argument('--debug', action='store_true', help='debugging verbosity')
 
     # parse the arguments
     args = parser.parse_args()
@@ -253,7 +255,7 @@ def phred(x):
     if x == 0:
         return 180
     else:
-        return max(-10 * math.log(x, 10), 0)
+        return max(0, -10 * math.log(x, 10))
 
 # return the genotype and p-value
 def bayes_gt(ref, alt):
@@ -269,7 +271,7 @@ def bayes_gt(ref, alt):
     return (p_homref, p_het, p_homalt)
 
 # primary function
-def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
+def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, debug):
     padding = 30
     bam = bam_list[0]
     spl_bam = spl_list[0]
@@ -277,6 +279,12 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
     in_header = True
     header = []
     vcf = Vcf()
+
+    # spanning coverage variables
+    mean_ospan = 320
+    sd_ospan = 80
+    mean_ispan = mean_ospan - (2 * discflank)
+    sd_ispan = 80
 
     for line in vcf_file:
         if in_header:
@@ -296,8 +304,8 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
         v = line.rstrip().split('\t')
         var = Variant(v, vcf)
         o1, o2 =  list(var.info['STR'].split(',')[0].split(':')[0])
+        end = int(var.get_info('END'))
 
-        
         '''
         Breakend A
         '''
@@ -313,23 +321,21 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
 
         for spl_read in spl_bam.fetch(var.chrom, var.pos - padding, var.pos + padding + 1):
             if not spl_read.is_duplicate and not spl_read.is_unmapped:
-                #print spl_read.aend, spl_read
+                if debug:
+                    print spl_read.pos + 1, spl_read.aend, spl_read
                 if o1 == '+' and spl_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
                     spl_counter_a[spl_read.aend] += 1
                 elif o1 == '-' and spl_read.cigar[-1][0] == 0:
                     spl_counter_a[spl_read.pos + 1] += 1
 
         # check whether the lumpy base matches my base
-        #vcf_out.write('%s\t' % var.pos)
+        # vcf_out.write('%s\t' % var.pos)
 
         '''
         Breakend B
         '''
-
         ref_counter_b = Counter()
         spl_counter_b = Counter()
-
-        end = int(var.get_info('END'))
 
         for ref_read in bam.fetch(var.chrom, end - padding, end + padding + 1):
             if not ref_read.is_duplicate and not ref_read.is_unmapped:
@@ -339,27 +345,140 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
 
         for spl_read in spl_bam.fetch(var.chrom, end - padding, end + padding + 1):
             if not spl_read.is_duplicate and not spl_read.is_unmapped:
-                #print spl_read.aend, spl_read
-                if o1 == '+' and spl_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
+                if debug:
+                    print spl_read.pos + 1, spl_read.aend, spl_read
+                if o2 == '+' and spl_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
                     spl_counter_b[spl_read.aend] += 1
-                elif o1 == '-' and spl_read.cigar[-1][0] == 0:
+                elif o2 == '-' and spl_read.cigar[-1][0] == 0:
                     spl_counter_b[spl_read.pos + 1] += 1
 
+        #print spl_counter_a.most_common(1)[0]
+        #print spl_counter_b.most_common(1)[0]
+
         # check whether the lumpy base matches my base
-        #vcf_out.write('%s\t' % var.pos)
+        # vcf_out.write('%s\t' % var.pos)
+
+
+        '''
+        Spanning coverage A
+        '''
+        conc_counter_a = 0
+        disc_counter_a = 0
+
+        for read in bam.fetch(var.chrom, var.pos - 1 - (mean_ospan + sd_ospan * z), var.pos + (mean_ospan + sd_ospan * z)):
+            if read.is_secondary or read.is_unmapped or not read.mate_is_unmapped:
+                continue
+            else:
+                if o1 == '+' and o2 == '-' and not read.is_reverse and read.mate_is_reverse:
+                    mate = bam.mate(read)
+                    ispan_left = read.pos + discflank
+                    ispan_right = mate.aend - discflank - 1
+
+                elif o1 == '+' and o2 == '+' and not read.is_reverse and not read.mate_is_reverse:
+                    mate = bam.mate(read)
+                    ispan_left = read.pos + discflank
+                    ispan_right = mate.pos + discflank - 1
+
+                elif o1 == '-' and o2 == '-' and read.is_reverse and read.mate_is_reverse:
+                    mate = bam.mate(read)
+                    ispan_left = read.aend - discflank
+                    ispan_right = mate.aend - discflank
+                    
+                elif o1 == '-' and o2 == '+' and read.is_reverse and not read.mate_is_reverse:
+                    mate = bam.mate(read)
+                    ispan_left = read.aend - discflank
+                    ispan_right = mate.pos + discflank - 1
+                else:
+                    continue
+
+                if debug:
+                    print read
+                    print mate
+
+
+                ispan = ispan_right - ispan_left
+                if var.pos > ispan_left and var.pos <= ispan_right and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
+                    # CHECK FOR 1-OFF PROBLEMS HERE
+                    # for p in range(ispan_left + 1, ispan_right + 1):
+                    #    conc_counter_a[p] += 1
+                    conc_counter_a += 1
+
+                # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
+                elif var.pos > ispan_left and var.pos <= ispan_right and ispan > 0 and ispan_right + 1 > end and ispan_right + 1 < end + padding + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
+                    # for p in range(ispan_left + 1, ispan_right + 1):
+                    #    disc_counter_a[p] += 1
+                    disc_counter_a += 1
+                            
+        #print '\t'.join(map(str, (var.chrom, var.pos, conc_counter_a, disc_counter_a, 'disc_A', 'id')))
+            # for p in range(var.pos - padding, var.pos + padding + 1):
+            #     print '\t'.join(map(str, (var.chrom, p, conc_counter_a[p], disc_counter_a[p], 'disc_A', 'id')))
+
+        
+
+        '''
+        Spanning coverage B
+        '''
+
+        conc_counter_b = 0
+        disc_counter_b = 0
+
+        for read in bam.fetch(var.chrom, var.pos - 1 - (mean_ospan + sd_ospan * z), end + (mean_ospan + sd_ospan * z)):
+            if not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
+                if o1 == '+' and o2 == '-' and not read.mate_is_reverse and read.is_reverse:
+                    mate = bam.mate(read)
+                    ispan_left = mate.aend - discflank - 1
+                    ispan_right = read.pos + discflank
+
+                elif o1 == '+' and o2 == '+' and not read.mate_is_reverse and not read.is_reverse:
+                    mate = bam.mate(read)
+                    ispan_left = mate.pos + discflank - 1
+                    ispan_right = read.pos + discflank
+
+                elif o1 == '-' and o2 == '-' and read.mate_is_reverse and read.is_reverse:
+                    mate = bam.mate(read)
+                    ispan_left = mate.aend - discflank
+                    ispan_right = read.aend - discflank
+
+                elif o1 == '-' and o2 == '+' and read.mate_is_reverse and not read.is_reverse:
+                    mate = bam.mate(read)
+                    ispan_left = mate.pos + discflank - 1
+                    ispan_right = read.aend - discflank
+                else:
+                    continue
+
+                ispan = ispan_right - ispan_left
+                if end > ispan_left and end <= ispan_right and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
+                    # CHECK FOR 1-OFF PROBLEMS HERE
+                    # for p in range(ispan_left + 1, ispan_right + 1):
+                    #    conc_counter_a[p] += 1
+                    conc_counter_b += 1
+
+                # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
+                elif end > ispan_left and end <= ispan_right and ispan > 0 and ispan_right + 1 > end and ispan_right + 1 < end + padding + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
+                    # for p in range(ispan_left + 1, ispan_right + 1):
+                    #    disc_counter_a[p] += 1
+                    disc_counter_b += 1
+                    
+        # print '\t'.join(map(str, (var.chrom, var.pos, conc_counter_a + conc_counter_b, disc_counter_a + disc_counter_b, conc_counter_a, disc_counter_a, conc_counter_b, disc_counter_b)))
+            # for p in range(var.pos - padding, var.pos + padding + 1):
+            #     print '\t'.join(map(str, (var.chrom, p, conc_counter_b[p], disc_counter_b[p], 'disc_A', 'id')))
 
         if len(spl_counter_a) > 0:
             breakend_a = spl_counter_a.most_common(1)[0][0]
             #print var.pos
             var.pos = breakend_a
             #print '\t'.join(map(str,(var.chrom, var.pos, ref_counter[breakend], spl_counter[breakend])))
+        else:
+            breakend_a = var.pos
 
         if len(spl_counter_b) > 0:
             breakend_b = spl_counter_b.most_common(1)[0][0]
             var.set_info('END', breakend_b)
+        else:
+            breakend_b = var.get_info('END')
 
         if len(spl_counter_a) + len(spl_counter_b) > 0:
-            gt_plist = bayes_gt(ref_counter_a[breakend_a] + ref_counter_b[breakend_b], spl_counter_a[breakend_a] + spl_counter_b[breakend_b])
+            gt_plist = bayes_gt(ref_counter_a[breakend_a] + ref_counter_b[breakend_b] + conc_counter_a + conc_counter_b, spl_counter_a[breakend_a] + spl_counter_b[breakend_b] + disc_counter_a + disc_counter_b)
             gt_idx = gt_plist.index(max(gt_plist[1:]))
             var.qual = phred(gt_plist[0]/sum(gt_plist))
             var.genotype(sample).set_format('GQ', phred(1 - gt_plist[gt_idx]/sum(gt_plist[1:])))
@@ -374,7 +493,6 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank):
             var.genotype(sample).set_format('GT', './.')
             var.qual = 0
 
-        #print var.get_info_string()
         print var.get_var_string()
 
     vcf_out.close()
@@ -397,7 +515,7 @@ def main():
         spl_list.append(pysam.Samfile(sfile, 'rb'))
 
     # call primary function
-    sv_genotype(args.input_vcf, bam_list, spl_list, args.output_vcf, args.splflank, args.discflank)
+    sv_genotype(args.input_vcf, bam_list, spl_list, args.output_vcf, args.splflank, args.discflank, args.z, args.debug)
 
     # close the files
     args.input_vcf.close()
