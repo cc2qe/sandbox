@@ -275,7 +275,6 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, d
     padding = 30
     bam = bam_list[0]
     spl_bam = spl_list[0]
-    sample = 'NA12878'
     in_header = True
     header = []
     vcf = Vcf()
@@ -300,6 +299,7 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, d
                 vcf.add_format('RO', 1, 'Integer', 'Reference allele observation count, with partial observations recorded fractionally')
                 vcf.add_format('AO', 'A', 'Integer', 'Alternate allele observations, with partial observations recorded fractionally')
                 print vcf.get_header()
+                sample = vcf.sample_list[0]
 
         v = line.rstrip().split('\t')
         var = Variant(v, vcf)
