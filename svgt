@@ -464,27 +464,20 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, d
             #     print '\t'.join(map(str, (var.chrom, p, conc_counter_b[p], disc_counter_b[p], 'disc_A', 'id')))
 
         if len(spl_counter_a) > 0:
-            breakend_a = spl_counter_a.most_common(1)[0][0]
-            #print var.pos
-            var.pos = breakend_a
+            var.pos = spl_counter_a.most_common(1)[0][0]
             #print '\t'.join(map(str,(var.chrom, var.pos, ref_counter[breakend], spl_counter[breakend])))
-        else:
-            breakend_a = var.pos
 
         if len(spl_counter_b) > 0:
-            breakend_b = spl_counter_b.most_common(1)[0][0]
-            var.set_info('END', breakend_b)
-        else:
-            breakend_b = var.get_info('END')
+            var.set_info('END', spl_counter_b.most_common(1)[0][0])
 
-        if len(spl_counter_a) + len(spl_counter_b) > 0:
-            gt_plist = bayes_gt(ref_counter_a[breakend_a] + ref_counter_b[breakend_b] + conc_counter_a + conc_counter_b, spl_counter_a[breakend_a] + spl_counter_b[breakend_b] + disc_counter_a + disc_counter_b)
+        if len(spl_counter_a) + len(spl_counter_b) + disc_counter_a + disc_counter_b > 0:
+            gt_plist = bayes_gt(ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')] + conc_counter_a + conc_counter_b, spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + disc_counter_a + disc_counter_b)
             gt_idx = gt_plist.index(max(gt_plist[1:]))
             var.qual = phred(gt_plist[0]/sum(gt_plist))
             var.genotype(sample).set_format('GQ', phred(1 - gt_plist[gt_idx]/sum(gt_plist[1:])))
-            var.genotype(sample).set_format('DP', spl_counter_a[breakend_a] + ref_counter_a[breakend_a] + spl_counter_b[breakend_b] + ref_counter_b[breakend_b])
-            var.genotype(sample).set_format('AO', spl_counter_a[breakend_a] + spl_counter_b[breakend_b])
-            var.genotype(sample).set_format('RO', ref_counter_a[breakend_a] + ref_counter_b[breakend_b])
+            var.genotype(sample).set_format('DP', spl_counter_a[var.pos] + ref_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + ref_counter_b[var.get_info('END') + conc_counter_a + disc_counter_a + conc_counter_b + disc_counter_b])
+            var.genotype(sample).set_format('AO', spl_counter_a[var.pos] + spl_counter_b[var.get_info('END') + disc_counter_a + disc_counter_b])
+            var.genotype(sample).set_format('RO', ref_counter_a[var.pos] + ref_counter_b[var.get_info('END') + conc_counter_a + conc_counter_b])
             if gt_idx == 1:
                 var.genotype(sample).set_format('GT', '0/1')
             elif gt_idx == 2:
