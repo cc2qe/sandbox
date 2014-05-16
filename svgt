@@ -26,7 +26,9 @@ description: Compute genotype of structural variants based on breakpoint depth")
     parser.add_argument('-v', '--input_vcf', type=argparse.FileType('r'), default=None, help='VCF input (default: stdin)')
     parser.add_argument('-B', '--bam', type=str, required=True, help='BAM file(s), comma-separated if genotyping multiple BAMs')
     parser.add_argument('-S', '--split_bam', type=str, required=False, default=None, help='split-read bam file for sample')
-    parser.add_argument('-s', '--samples', type=str, required=False, help='sample names of VCF header, comma-separated ')
+    parser.add_argument('-m', '--mean_frag_size', type=float, required=True, help='mean fragment size of library')
+    parser.add_argument('-s', '--sd_frag_size', type=float, required=True, help='standard deviation of fragment size of library')
+    #parser.add_argument('-s', '--samples', type=str, required=False, help='sample names of VCF header, comma-separated ')
     parser.add_argument('-o', '--output_vcf', type=argparse.FileType('w'), default=sys.stdout, help='output BEDPE to write (default: stdout)')
     parser.add_argument('--debug', action='store_true', help='debugging verbosity')
 
@@ -271,7 +273,7 @@ def bayes_gt(ref, alt):
     return (p_homref, p_het, p_homalt)
 
 # primary function
-def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, debug):
+def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, mean_ospan, sd_ospan, debug):
     padding = 30
     bam = bam_list[0]
     spl_bam = spl_list[0]
@@ -280,10 +282,10 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, d
     vcf = Vcf()
 
     # spanning coverage variables
-    mean_ospan = 320
-    sd_ospan = 80
+    #mean_ospan = 320
+    #sd_ospan = 80
     mean_ispan = mean_ospan - (2 * discflank)
-    sd_ispan = 80
+    sd_ispan = sd_ospan
 
     for line in vcf_file:
         if in_header:
@@ -298,7 +300,8 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, d
                 vcf.add_header(header)
                 vcf.add_format('RO', 1, 'Integer', 'Reference allele observation count, with partial observations recorded fractionally')
                 vcf.add_format('AO', 'A', 'Integer', 'Alternate allele observations, with partial observations recorded fractionally')
-                print vcf.get_header()
+                # change this to vcf)out write
+                #print vcf.get_header()
                 sample = vcf.sample_list[0]
 
         v = line.rstrip().split('\t')
@@ -451,6 +454,8 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, d
                     # CHECK FOR 1-OFF PROBLEMS HERE
                     # for p in range(ispan_left + 1, ispan_right + 1):
                     #    conc_counter_a[p] += 1
+                    # print read
+                    # print mate
                     conc_counter_b += 1
 
                 # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
@@ -473,11 +478,18 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, d
         if len(spl_counter_a) + len(spl_counter_b) + disc_counter_a + disc_counter_b > 0:
             gt_plist = bayes_gt(ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')] + conc_counter_a + conc_counter_b, spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + disc_counter_a + disc_counter_b)
             gt_idx = gt_plist.index(max(gt_plist[1:]))
+            '''
+            print conc_counter_a, disc_counter_a
+            print conc_counter_b, disc_counter_b
+            print ref_counter_a[var.pos], spl_counter_a[var.pos]
+            print ref_counter_b[var.get_info('END')], spl_counter_b[var.get_info('END')]
+            print gt_plist
+            '''
             var.qual = phred(gt_plist[0]/sum(gt_plist))
             var.genotype(sample).set_format('GQ', phred(1 - gt_plist[gt_idx]/sum(gt_plist[1:])))
             var.genotype(sample).set_format('DP', spl_counter_a[var.pos] + ref_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + ref_counter_b[var.get_info('END') + conc_counter_a + disc_counter_a + conc_counter_b + disc_counter_b])
-            var.genotype(sample).set_format('AO', spl_counter_a[var.pos] + spl_counter_b[var.get_info('END') + disc_counter_a + disc_counter_b])
-            var.genotype(sample).set_format('RO', ref_counter_a[var.pos] + ref_counter_b[var.get_info('END') + conc_counter_a + conc_counter_b])
+            var.genotype(sample).set_format('AO', spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + disc_counter_a + disc_counter_b)
+            var.genotype(sample).set_format('RO', ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')] + conc_counter_a + conc_counter_b)
             if gt_idx == 1:
                 var.genotype(sample).set_format('GT', '0/1')
             elif gt_idx == 2:
@@ -508,7 +520,7 @@ def main():
         spl_list.append(pysam.Samfile(sfile, 'rb'))
 
     # call primary function
-    sv_genotype(args.input_vcf, bam_list, spl_list, args.output_vcf, args.splflank, args.discflank, args.z, args.debug)
+    sv_genotype(args.input_vcf, bam_list, spl_list, args.output_vcf, args.splflank, args.discflank, args.z, args.mean_frag_size, args.sd_frag_size, args.debug)
 
     # close the files
     args.input_vcf.close()
