@@ -120,8 +120,9 @@ int usage()
 {
   fprintf(stderr,
 	  "usage: ldsearch [options] <file> <samples>\n\n"
+	  "ldsearch\n"
 	  "authors: Ryan Layer and Colby Chiang\n"
-	  "description: finds loci in linkage disequilibrium based on\n"
+	  "description: reports loci in linkage disequilibrium based on\n"
 	  "  genotype frequencies in a set of individuals\n"
 	  "\n"
 	  "positional arguments:\n"
@@ -131,6 +132,7 @@ int usage()
 	  "\n"
 	  "optional arguments:\n"
 	  "  -h                     show this help and exit\n"
+<<<<<<< Updated upstream
 	  "  -s NUM_SAMPLES         number of samples in file\n"
 	  "  -l NUM_LOCI            number of loci in file\n"
 	  "  -k SET_SIZE            number of loci in each set\n"
@@ -141,6 +143,14 @@ int usage()
 	  "                           if the expected freq is greater than MIN_EXP\n"
 	  "                           (default: 5)\n"
 	  "  -b                     brief but faster output\n"
+=======
+	  "  -s NUM_SAMP            number of samples in file\n"
+	  "  -l NUM_LOCI            number of loci in file\n"
+	  "  -k SET_SIZE            number of loci in set of interactions\n"
+	  "                           (currently 3 no matter what you put, sucka)\n"
+	  "  -d MIN_DIST            minimum distance between loci\n"
+	  "  -x MIN_CHI             minimum chi-squared sum to print\n"
+>>>>>>> Stashed changes
 	  "\n"
 	  );
   return 1;
@@ -148,6 +158,7 @@ int usage()
 
 int main (int argc, char **argv)
 {
+  int set_size = 3;
   int min_distance = 0;
   int num_samples;
   int num_loci;
@@ -163,10 +174,17 @@ int main (int argc, char **argv)
   int c;
   opterr = 0;
 
+<<<<<<< Updated upstream
   while ((c = getopt(argc, argv, "hd:s:l:k:x:e:b")) != -1) {
+=======
+  while ((c = getopt(argc, argv, "hk:d:s:l:x:")) != -1) {
+>>>>>>> Stashed changes
     switch (c) {
     case 'h':
       return usage();
+    case 'k':
+      // set_size = atoi(optarg);
+      break;
     case 'd':
       min_distance = atoi(optarg);
       break;
@@ -192,7 +210,7 @@ int main (int argc, char **argv)
       brief = 1;
       break;
     case '?':
-      if (optopt == 'c')
+      if (optopt == 'd' || optopt == 's' || optopt == 'l' || optopt == 'x')
 	fprintf(stderr, "Option -%c requires an argument\n", optopt);
       else if (isprint(optopt))
 	fprintf(stderr, "Unknown option '-%c'\n", optopt);
@@ -221,27 +239,60 @@ int main (int argc, char **argv)
 
   // make an array from the samples file
   char line[max_line];
-  char **sample = (char **) malloc(3 * sizeof(char*));
+  char *sample_subpops[num_loci];
   int j = 0;
   while (fgets(line, max_line, s) != NULL) {
     char *sample_name = strtok(line, sep);
+<<<<<<< Updated upstream
     char *sample_ethn = strtok(NULL, sep);
+=======
+    char *sample_eth = strtok(NULL, sep);
+>>>>>>> Stashed changes
     char *sample_subpop = strtok(NULL, sep);
 
     // copy the string into an array that will be retained
     // through the end of the run
+<<<<<<< Updated upstream
     //sample[0] = strdup(sample_name);
     //sample[1] = strdup(sample_ethn);
     //sample[2] = strdup(sample_subpop);
+=======
+    sample_subpops[j] = strndup(sample_subpop,strlen(sample_subpop)-1);
+>>>>>>> Stashed changes
 
     ++j;
   }
   fclose(s);
 
+<<<<<<< Updated upstream
   // for (j = 0; j < num_samples; ++j) {
   //   printf("%d\n", j);   
   // }
   
+=======
+  // test some things out about the samples files
+  // get metrics on the subpopulations
+
+  // make list of the available populations
+  char **pops = (char **) malloc(5 * sizeof(char*));
+  pops[0] = "AFR";
+  pops[1] = "AMR";
+  pops[2] = "ASN";
+  pops[3] = "EUR";
+  pops[4] = "ALL";
+  
+
+  //  int *afr_indices;
+  //  int *amr_indices;
+  //  int *asn_indices;
+  //  int *eur_indices;
+  //  printf("%d\n", countSamples(samples,"AFR",num_samples));
+
+  //  for (j = 0; j < num_samples; ++j) {
+  // printf("%s\n", sample_subpops[j]);
+  // }
+
+>>>>>>> Stashed changes
   // array of arrays containing genotype info for each sample
   // at each locus
   char *chrArr[num_loci];
@@ -264,6 +315,8 @@ int main (int argc, char **argv)
     char *rate_4 = strtok(NULL, sep);
     char *rate_5 = strtok(NULL, sep);
 
+    // copy strings to array that will be retained
+    // through the end of the run
     chrArr[j] = strdup(chr);
     posArr[j] = pos;
     geneArr[j] = strdup(gene);
@@ -321,10 +374,22 @@ int main (int argc, char **argv)
 	    strcmp(chrArr[j],chrArr[k]) == 0 && abs(posArr[j] - posArr[k]) < min_distance) {
 	  continue;
 	}	
+<<<<<<< Updated upstream
 	
 	// number of samples at are informative at all loci in k
 	int num_multi_informative = 0;
 	
+=======
+
+	// store the expected number in expected
+	get_expected(rates[i],
+		     rates[j],
+		     rates[k],
+		     num_samples,
+		     expected);
+
+	// store the observed number in observed
+>>>>>>> Stashed changes
 	get_observed(M[i],
 		     M[j],
 		     M[k],

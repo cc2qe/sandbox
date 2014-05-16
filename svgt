@@ -274,6 +274,7 @@ def bayes_gt(ref, alt):
 
 # primary function
 def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, mean_ospan, sd_ospan, debug):
+    read_length = 100
     padding = 30
     bam = bam_list[0]
     spl_bam = spl_list[0]
@@ -300,8 +301,7 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
                 vcf.add_header(header)
                 vcf.add_format('RO', 1, 'Integer', 'Reference allele observation count, with partial observations recorded fractionally')
                 vcf.add_format('AO', 'A', 'Integer', 'Alternate allele observations, with partial observations recorded fractionally')
-                # change this to vcf)out write
-                #print vcf.get_header()
+                vcf_out.write(vcf.get_header() + '\n')
                 sample = vcf.sample_list[0]
 
         v = line.rstrip().split('\t')
@@ -361,43 +361,27 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
         # check whether the lumpy base matches my base
         # vcf_out.write('%s\t' % var.pos)
 
-
         '''
         Spanning coverage A
         '''
         conc_counter_a = 0
         disc_counter_a = 0
 
-        for read in bam.fetch(var.chrom, var.pos - 1 - (mean_ospan + sd_ospan * z), var.pos + (mean_ospan + sd_ospan * z)):
-            if read.is_secondary or read.is_unmapped or not read.mate_is_unmapped:
-                continue
-            else:
-                if o1 == '+' and o2 == '-' and not read.is_reverse and read.mate_is_reverse:
-                    mate = bam.mate(read)
-                    ispan_left = read.pos + discflank
-                    ispan_right = mate.aend - discflank - 1
-
-                elif o1 == '+' and o2 == '+' and not read.is_reverse and not read.mate_is_reverse:
-                    mate = bam.mate(read)
-                    ispan_left = read.pos + discflank
-                    ispan_right = mate.pos + discflank - 1
-
-                elif o1 == '-' and o2 == '-' and read.is_reverse and read.mate_is_reverse:
-                    mate = bam.mate(read)
-                    ispan_left = read.aend - discflank
-                    ispan_right = mate.aend - discflank
-                    
-                elif o1 == '-' and o2 == '+' and read.is_reverse and not read.mate_is_reverse:
-                    mate = bam.mate(read)
-                    ispan_left = read.aend - discflank
-                    ispan_right = mate.pos + discflank - 1
-                else:
+        if o1 == '+':
+            print var.chrom, var.pos - 1 - (mean_ospan + sd_ospan * z), var.pos
+            for read in bam.fetch(var.chrom, var.pos - 1 - (mean_ospan + sd_ospan * z), var.pos):
+                if read.is_reverse or read.is_secondary or read.mate_is_unmapped or read.is_duplicate:
                     continue
+                if o2 == '-':
+                    if not read.mate_is_reverse or read.pnext + read_length - discflank < var.pos:
+                        continue
+                    else:
 
-                if debug:
-                    print read
-                    print mate
+                        #print read                    
 
+                        mate = bam.mate(read)
+                        ispan_left = read.pos + discflank
+                        ispan_right = mate.aend - discflank - 1
 
                 ispan = ispan_right - ispan_left
                 if var.pos > ispan_left and var.pos <= ispan_right and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
@@ -411,12 +395,14 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
                     # for p in range(ispan_left + 1, ispan_right + 1):
                     #    disc_counter_a[p] += 1
                     disc_counter_a += 1
+                    # if debug:
+                    #     print read
+                    #     print mate
+
                             
         #print '\t'.join(map(str, (var.chrom, var.pos, conc_counter_a, disc_counter_a, 'disc_A', 'id')))
             # for p in range(var.pos - padding, var.pos + padding + 1):
             #     print '\t'.join(map(str, (var.chrom, p, conc_counter_a[p], disc_counter_a[p], 'disc_A', 'id')))
-
-        
 
         '''
         Spanning coverage B
@@ -425,29 +411,17 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
         conc_counter_b = 0
         disc_counter_b = 0
 
-        for read in bam.fetch(var.chrom, var.pos - 1 - (mean_ospan + sd_ospan * z), end + (mean_ospan + sd_ospan * z)):
-            if not read.is_secondary and not read.is_unmapped and not read.mate_is_unmapped:
-                if o1 == '+' and o2 == '-' and not read.mate_is_reverse and read.is_reverse:
-                    mate = bam.mate(read)
-                    ispan_left = mate.aend - discflank - 1
-                    ispan_right = read.pos + discflank
-
-                elif o1 == '+' and o2 == '+' and not read.mate_is_reverse and not read.is_reverse:
-                    mate = bam.mate(read)
-                    ispan_left = mate.pos + discflank - 1
-                    ispan_right = read.pos + discflank
-
-                elif o1 == '-' and o2 == '-' and read.mate_is_reverse and read.is_reverse:
-                    mate = bam.mate(read)
-                    ispan_left = mate.aend - discflank
-                    ispan_right = read.aend - discflank
-
-                elif o1 == '-' and o2 == '+' and read.mate_is_reverse and not read.is_reverse:
-                    mate = bam.mate(read)
-                    ispan_left = mate.pos + discflank - 1
-                    ispan_right = read.aend - discflank
-                else:
+        if o2 == '-':
+            for read in bam.fetch(var.chrom, var.pos, var.pos - 1 + (mean_ospan + sd_ospan * z)):
+                if not read.is_reverse or read.is_secondary or read.mate_is_unmapped or read.is_duplicate:
                     continue
+                if o1 == '+':
+                    if read.mate_is_reverse or read.pnext + discflank > var.pos:
+                        continue
+                    else:
+                        mate = bam.mate(read)
+                        ispan_left = mate.pos + discflank
+                        ispan_right = read.aend - discflank - 1
 
                 ispan = ispan_right - ispan_left
                 if end > ispan_left and end <= ispan_right and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
@@ -478,16 +452,20 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
         if len(spl_counter_a) + len(spl_counter_b) + disc_counter_a + disc_counter_b > 0:
             gt_plist = bayes_gt(ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')] + conc_counter_a + conc_counter_b, spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + disc_counter_a + disc_counter_b)
             gt_idx = gt_plist.index(max(gt_plist[1:]))
-            '''
-            print conc_counter_a, disc_counter_a
-            print conc_counter_b, disc_counter_b
-            print ref_counter_a[var.pos], spl_counter_a[var.pos]
-            print ref_counter_b[var.get_info('END')], spl_counter_b[var.get_info('END')]
-            print gt_plist
-            '''
+
+            if debug:
+                print conc_counter_a, disc_counter_a
+                print conc_counter_b, disc_counter_b
+                print ref_counter_a[var.pos], spl_counter_a[var.pos]
+                print ref_counter_b[var.get_info('END')], spl_counter_b[var.get_info('END')]
+                print gt_plist
+
+                print
+                print type(spl_counter_a[var.pos]), type(ref_counter_a[var.pos]), type(spl_counter_b[var.get_info('END')]), type(ref_counter_b[var.get_info('END')]), type(conc_counter_a), type(conc_counter_b), type(disc_counter_a), type(disc_counter_b)
+
             var.qual = phred(gt_plist[0]/sum(gt_plist))
             var.genotype(sample).set_format('GQ', phred(1 - gt_plist[gt_idx]/sum(gt_plist[1:])))
-            var.genotype(sample).set_format('DP', spl_counter_a[var.pos] + ref_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + ref_counter_b[var.get_info('END') + conc_counter_a + disc_counter_a + conc_counter_b + disc_counter_b])
+            var.genotype(sample).set_format('DP', spl_counter_a[var.pos] + ref_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + ref_counter_b[var.get_info('END')] + conc_counter_a + disc_counter_a + conc_counter_b + disc_counter_b)
             var.genotype(sample).set_format('AO', spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + disc_counter_a + disc_counter_b)
             var.genotype(sample).set_format('RO', ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')] + conc_counter_a + conc_counter_b)
             if gt_idx == 1:
