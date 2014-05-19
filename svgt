@@ -312,7 +312,6 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
         '''
         Breakend A
         '''
-
         ref_counter_a = Counter()
         spl_counter_a = Counter()
 
@@ -367,11 +366,21 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
         conc_counter_a = 0
         disc_counter_a = 0
 
+
+        def count_concordant(chrom, pos, min_frag, max_frag, mybam):
+            conc_count =  0
+            for read in mybam.fetch(chrom, pos, 0, mean_ospan + sd_ospan * z, bam):
+                if read.is_reverse or read.is_secondary or read.mate_is_unmapped or read.is_duplicate or not read.mate_is_reverse or read.pnext + read_length - discflank < pos:
+                    continue
+                else:
+                    print read
+            
+
         if o1 == '+':
-            print var.chrom, var.pos - 1 - (mean_ospan + sd_ospan * z), var.pos
             for read in bam.fetch(var.chrom, var.pos - 1 - (mean_ospan + sd_ospan * z), var.pos):
                 if read.is_reverse or read.is_secondary or read.mate_is_unmapped or read.is_duplicate:
                     continue
+                # handle +,- strand orienation (deletions)
                 if o2 == '-':
                     if not read.mate_is_reverse or read.pnext + read_length - discflank < var.pos:
                         continue
@@ -380,26 +389,62 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
                         #print read                    
 
                         mate = bam.mate(read)
-                        ispan_left = read.pos + discflank
-                        ispan_right = mate.aend - discflank - 1
+                        ispan_1 = read.pos + discflank
+                        ispan_2 = mate.aend - discflank - 1
 
-                ispan = ispan_right - ispan_left
-                if var.pos > ispan_left and var.pos <= ispan_right and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
-                    # CHECK FOR 1-OFF PROBLEMS HERE
-                    # for p in range(ispan_left + 1, ispan_right + 1):
-                    #    conc_counter_a[p] += 1
-                    conc_counter_a += 1
+                        ispan = ispan_2 - ispan_1
+                        if var.pos > ispan_1 and var.pos <= ispan_2 and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
+                            # CHECK FOR 1-OFF PROBLEMS HERE
+                            # for p in range(ispan_1 + 1, ispan_2 + 1):
+                            #    conc_counter_a[p] += 1
+                            conc_counter_a += 1
 
-                # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-                elif var.pos > ispan_left and var.pos <= ispan_right and ispan > 0 and ispan_right + 1 > end and ispan_right + 1 < end + padding + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
-                    # for p in range(ispan_left + 1, ispan_right + 1):
-                    #    disc_counter_a[p] += 1
-                    disc_counter_a += 1
-                    # if debug:
-                    #     print read
-                    #     print mate
+                        # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
+                        elif var.pos > ispan_1 and var.pos <= ispan_2 and ispan > 0 and ispan_2 + 1 > end and ispan_2 + 1 < end + padding + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
+                            # for p in range(ispan_1 + 1, ispan_2 + 1):
+                            #    disc_counter_a[p] += 1
+                            disc_counter_a += 1
+                            # if debug:
+                            #     print read
+                            #     print mate
 
-                            
+
+                # do something for inversion
+                if o2 == '+':
+                    pass
+
+        elif o1 == '-':
+            for read in bam.fetch(var.chrom, var.pos, var.pos - 1 + (mean_ospan + sd_ospan * z)): 
+                if not read.is_reverse or read.is_secondary or read.mate_is_unmapped or read.is_duplicate:
+                    continue
+
+                # tandem duplication
+                if o2 == '+':
+                    if read.mate_is_reverse:
+                       continue
+                    else:
+                        mate = bam.mate(read)
+                        ispan_1 = mate.pos + discflank
+                        ispan_2 = read.aend - discflank - 1
+
+                        ispan = ispan_2 - ispan_1
+                        if var.pos > ispan_1 and var.pos <= ispan_2 and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
+                            # CHECK FOR 1-OFF PROBLEMS HERE
+                            # for p in range(ispan_1 + 1, ispan_2 + 1):
+                            #    conc_counter_a[p] += 1
+                            conc_counter_a += 1
+
+                        # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
+                        elif var.pos > ispan_1 and var.pos <= ispan_2 and ispan > 0 and ispan_2 + 1 > end and ispan_2 + 1 < end + padding + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
+                            # for p in range(ispan_1 + 1, ispan_2 + 1):
+                            #    disc_counter_a[p] += 1
+                            disc_counter_a += 1
+                            # if debug:
+                            #     print read
+                            #     print mate
+
+
+
         #print '\t'.join(map(str, (var.chrom, var.pos, conc_counter_a, disc_counter_a, 'disc_A', 'id')))
             # for p in range(var.pos - padding, var.pos + padding + 1):
             #     print '\t'.join(map(str, (var.chrom, p, conc_counter_a[p], disc_counter_a[p], 'disc_A', 'id')))
@@ -420,21 +465,21 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
                         continue
                     else:
                         mate = bam.mate(read)
-                        ispan_left = mate.pos + discflank
-                        ispan_right = read.aend - discflank - 1
+                        ispan_1 = mate.pos + discflank
+                        ispan_2 = read.aend - discflank - 1
 
-                ispan = ispan_right - ispan_left
-                if end > ispan_left and end <= ispan_right and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
+                ispan = ispan_2 - ispan_1
+                if end > ispan_1 and end <= ispan_2 and ispan > 0 and ispan < mean_ispan + sd_ispan * z and read.qlen >= discflank and mate.qlen >= discflank:
                     # CHECK FOR 1-OFF PROBLEMS HERE
-                    # for p in range(ispan_left + 1, ispan_right + 1):
+                    # for p in range(ispan_1 + 1, ispan_2 + 1):
                     #    conc_counter_a[p] += 1
                     # print read
                     # print mate
                     conc_counter_b += 1
 
                 # also, maybe don't limit the right side to < endB, but allow it to go some number of stdevs to the right.
-                elif end > ispan_left and end <= ispan_right and ispan > 0 and ispan_right + 1 > end and ispan_right + 1 < end + padding + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
-                    # for p in range(ispan_left + 1, ispan_right + 1):
+                elif end > ispan_1 and end <= ispan_2 and ispan > 0 and ispan_2 + 1 > end and ispan_2 + 1 < end + padding + (mean_ispan + sd_ispan * z) and read.qlen >= discflank and mate.qlen >= discflank:
+                    # for p in range(ispan_1 + 1, ispan_2 + 1):
                     #    disc_counter_a[p] += 1
                     disc_counter_b += 1
                     
