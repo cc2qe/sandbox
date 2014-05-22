@@ -31,7 +31,6 @@ description: Compute genotype of structural variants based on breakpoint depth")
     parser.add_argument('--split_weight', type=float, required=False, default=1, help='weight for split reads [1]')
     parser.add_argument('--disc_weight', type=float, required=False, default=1, help='weight for discordant reads [1]')
     parser.add_argument('--booster', type=float, required=False, default=1.5, help='multiplier for weights with more than one type of support [1.5]')
-    #parser.add_argument('-s', '--samples', type=str, required=False, help='sample names of VCF header, comma-separated ')
     parser.add_argument('-o', '--output_vcf', type=argparse.FileType('w'), default=sys.stdout, help='output BEDPE to write (default: stdout)')
     parser.add_argument('--debug', action='store_true', help='debugging verbosity')
 
@@ -262,20 +261,6 @@ def log_choose(n, k):
 
     return r
 
-# n choose k combination
-def choose(n, k):
-    fact = math.factorial
-    return fact(n) / fact(k) / fact(n-k)
-
-# phred scale a probability
-def phred(x):
-    # if probability is zero, then set phred to 180, since python
-    # can hold up to 1e-17 for floats.
-    if x == 0:
-        return 180
-    else:
-        return max(0, -10 * math.log(x, 10))
-
 # return the genotype and log10 p-value
 def bayes_gt(ref, alt):
     # prob seeing an alt read with true genotype of of hom_ref, het, hom_alt respectively
@@ -288,6 +273,71 @@ def bayes_gt(ref, alt):
     lp_homalt = log_choose(total, alt) + alt * math.log(p_alt[2], 10) + ref * math.log(1 - p_alt[2], 10)
 
     return (lp_homref, lp_het, lp_homalt)
+
+def count_concordant(chrom, pos, min_frag, max_frag, discflank, mybam):
+    conc_count =  0
+    read_length = 100
+    # discflank = 20
+    for read in mybam.fetch(chrom, pos - max_frag, pos):
+        if read.is_reverse or not read.mate_is_reverse or read.is_secondary or read.is_unmapped or read.mate_is_unmapped or read.is_duplicate or read.mapq == 0 or read.pos + discflank > pos or read.pnext + read_length - discflank < pos:
+            continue
+        else:
+            mate = mybam.mate(read)
+            ispan1 = read.pos + discflank
+            ispan2 = mate.aend - discflank - 1
+            ispan = ispan2 - ispan1
+            if ispan2 > pos and ispan < max_frag:
+                #print mate.aend - discflank
+                conc_count += 1
+                #print mate
+    return conc_count
+
+def count_discordant(chrom, pos, o1, o2, min_frag, max_frag, discflank, mybam):
+    disc_counter = 0
+    read_length = 100
+    # discflank = 20
+    if o1 == '+':
+        for read in mybam.fetch(chrom, pos - max_frag, pos):
+            if read.is_reverse or read.is_secondary or read.is_unmapped or read.mate_is_unmapped or read.is_duplicate or read.mapq == 0 or read.pnext + read_length - discflank < pos:
+                continue
+
+            # +/- deletion
+            elif o2 == '-':
+                if not read.mate_is_reverse or read.pnext + read_length - discflank < pos:
+                    continue
+                else:
+                    mate = mybam.mate(read)
+                    ispan1 = read.pos + discflank
+                    ispan2 = mate.aend - discflank - 1
+                    ispan = ispan2 - ispan1
+                    if ispan > max_frag - 2*discflank:
+                        disc_counter += 1
+
+            # +/+ inversion
+            elif o2 == '+':
+                if not read.mate_is_reverse:
+                    # restrict this
+                    disc_counter += 1
+
+    if o1 == '-':
+        for read in mybam.fetch(chrom, pos, pos + max_frag):
+            if not read.is_reverse or read.is_secondary or read.is_unmapped or read.mate_is_unmapped or read.is_duplicate or read.mapq == 0 or read.pnext + read_length - discflank > pos:
+                continue
+
+            # -/+ tandem duplication
+            elif o2 == '+':
+                if not read.mate_is_reverse:
+                    disc_counter += 1
+
+            # -/- inversion
+            elif o2 == '-':
+                if read.mate_is_reverse:
+                    disc_counter += 1
+
+    return disc_counter
+
+
+
 
 # primary function
 def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, mean_ospan, sd_ospan, split_weight, disc_weight, booster, debug):
@@ -333,13 +383,13 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
         spl_counter_a = Counter()
 
         for ref_read in bam.fetch(var.chrom, var.pos - padding, var.pos + padding + 1):
-            if not ref_read.is_duplicate and not ref_read.is_unmapped:
+            if not ref_read.is_duplicate and not ref_read.is_unmapped and ref_read.mapq > 0:
                 for p in range(ref_read.pos + 1, ref_read.aend + 1):
                     if p - ref_read.pos >= splflank and ref_read.aend - p >= splflank:
                         ref_counter_a[p] += 1
 
         for spl_read in spl_bam.fetch(var.chrom, var.pos - padding, var.pos + padding + 1):
-            if not spl_read.is_duplicate and not spl_read.is_unmapped:
+            if not spl_read.is_duplicate and not spl_read.is_unmapped and spl_read.mapq >0:
                 # if debug:
                 #     print spl_read.pos + 1, spl_read.aend, spl_read
                 if o1 == '+' and spl_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
@@ -357,13 +407,13 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
         spl_counter_b = Counter()
 
         for ref_read in bam.fetch(var.chrom, end - padding, end + padding + 1):
-            if not ref_read.is_duplicate and not ref_read.is_unmapped:
+            if not ref_read.is_duplicate and not ref_read.is_unmapped and ref_read.mapq > 0:
                 for p in range(ref_read.pos + 1, ref_read.aend + 1):
                     if p - ref_read.pos >= splflank and ref_read.aend - p >= splflank:
                         ref_counter_b[p] += 1
 
         for spl_read in spl_bam.fetch(var.chrom, end - padding, end + padding + 1):
-            if not spl_read.is_duplicate and not spl_read.is_unmapped:
+            if not spl_read.is_duplicate and not spl_read.is_unmapped and ref_read.mapq > 0:
                 # if debug:
                 #     print spl_read.pos + 1, spl_read.aend, spl_read
                 if o2 == '+' and spl_read.cigar[0][0] == 0: # and split_read.pnext > startB - readlength:
@@ -376,68 +426,6 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
 
         # check whether the lumpy base matches my base
         # vcf_out.write('%s\t' % var.pos)
-
-        def count_concordant(chrom, pos, min_frag, max_frag, mybam):
-            conc_count =  0
-            read_length = 100
-            # discflank = 20
-            for read in mybam.fetch(chrom, pos - max_frag, pos):
-                if read.is_reverse or not read.mate_is_reverse or read.is_secondary or read.is_unmapped or read.mate_is_unmapped or read.is_duplicate or read.pos + discflank > pos or read.pnext + read_length - discflank < pos:
-                    continue
-                else:
-                    mate = bam.mate(read)
-                    ispan1 = read.pos + discflank
-                    ispan2 = mate.aend - discflank - 1
-                    ispan = ispan2 - ispan1
-                    if ispan2 > pos and ispan < max_frag:
-                        #print mate.aend - discflank
-                        conc_count += 1
-                        #print mate
-            return conc_count
-
-        def count_discordant(chrom, pos, o1, o2, min_frag, max_frag, mybam):
-            disc_counter = 0
-            read_length = 100
-            # discflank = 20
-            if o1 == '+':
-                for read in mybam.fetch(chrom, pos - max_frag, pos):
-                    if read.is_reverse or read.is_secondary or read.is_unmapped or read.mate_is_unmapped or read.is_duplicate or read.pnext + read_length - discflank < pos:
-                        continue
-
-                    # +/- deletion
-                    elif o2 == '-':
-                        if not read.mate_is_reverse or read.pnext + read_length - discflank < pos:
-                            continue
-                        else:
-                            mate = bam.mate(read)
-                            ispan1 = read.pos + discflank
-                            ispan2 = mate.aend - discflank - 1
-                            ispan = ispan2 - ispan1
-                            if ispan > max_frag - 2*discflank:
-                                disc_counter += 1
-
-                    # +/+ inversion
-                    elif o2 == '+':
-                        if not read.mate_is_reverse:
-                            # restrict this
-                            disc_counter += 1
-
-            if o1 == '-':
-                for read in mybam.fetch(chrom, pos, pos + max_frag):
-                    if not read.is_reverse or read.is_secondary or read.is_unmapped or read.mate_is_unmapped or read.is_duplicate or read.pnext + read_length - discflank > pos:
-                        continue
-                    
-                    # -/+ tandem duplication
-                    elif o2 == '+':
-                        if not read.mate_is_reverse:
-                            disc_counter += 1
-
-                    # -/- inversion
-                    elif o2 == '-':
-                        if read.mate_is_reverse:
-                            disc_counter += 1
-                            
-            return disc_counter
 
         # conc_counter_a = count_concordant(var.chrom, var.pos, 0, 300, bam)
         # disc_counter_a = 0
@@ -457,21 +445,17 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
 
 
 
-        conc_counter_a = count_concordant(var.chrom, var.pos, 0, mean_ospan + sd_ospan * z, bam)
-        disc_counter_a = count_discordant(var.chrom, var.pos, o1, o2, 0, mean_ospan + sd_ospan * z, bam)
+        conc_counter_a = count_concordant(var.chrom, var.pos, 0, mean_ospan + sd_ospan * z, discflank, bam)
+        disc_counter_a = count_discordant(var.chrom, var.pos, o1, o2, 0, mean_ospan + sd_ospan * z, discflank, bam)
 
-        conc_counter_b = count_concordant(var.chrom, int(var.get_info('END')), 0, mean_ospan + sd_ospan * z, bam)
-        disc_counter_b = count_discordant(var.chrom, int(var.get_info('END')), o2, o1, 0, mean_ospan + sd_ospan * z, bam)
+        conc_counter_b = count_concordant(var.chrom, int(var.get_info('END')), 0, mean_ospan + sd_ospan * z, discflank, bam)
+        disc_counter_b = count_discordant(var.chrom, int(var.get_info('END')), o2, o1, 0, mean_ospan + sd_ospan * z, discflank, bam)
 
         if debug:
             print 'pe_a', conc_counter_a, disc_counter_a
             print 'pe_b', conc_counter_b, disc_counter_b
             print 'sr_a', ref_counter_a[var.pos], spl_counter_a[var.pos]
             print 'sr_b', ref_counter_b[var.get_info('END')], spl_counter_b[var.get_info('END')]
-
-        # break if depth is over 500
-        if conc_counter_a + disc_counter_a + conc_counter_b + disc_counter_b > 500:
-            continue
 
         if len(spl_counter_a) + len(spl_counter_b) + disc_counter_a + disc_counter_b > 0:
 
