@@ -28,6 +28,9 @@ description: Compute genotype of structural variants based on breakpoint depth")
     parser.add_argument('-S', '--split_bam', type=str, required=False, default=None, help='split-read bam file for sample')
     parser.add_argument('-m', '--mean_frag_size', type=float, required=True, help='mean fragment size of library')
     parser.add_argument('-s', '--sd_frag_size', type=float, required=True, help='standard deviation of fragment size of library')
+    parser.add_argument('--split_weight', type=float, required=False, default=1, help='weight for split reads')
+    parser.add_argument('--disc_weight', type=float, required=False, default=1, help='weight for discordant reads')
+    parser.add_argument('--booster', type=float, required=False, default=1.5, help='multiplier for weights with more than one type of support')
     #parser.add_argument('-s', '--samples', type=str, required=False, help='sample names of VCF header, comma-separated ')
     parser.add_argument('-o', '--output_vcf', type=argparse.FileType('w'), default=sys.stdout, help='output BEDPE to write (default: stdout)')
     parser.add_argument('--debug', action='store_true', help='debugging verbosity')
@@ -273,7 +276,7 @@ def bayes_gt(ref, alt):
     return (p_homref, p_het, p_homalt)
 
 # primary function
-def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, mean_ospan, sd_ospan, debug):
+def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, mean_ospan, sd_ospan, split_weight, disc_weight, booster, debug):
     read_length = 100
     padding = 30
     bam = bam_list[0]
@@ -457,7 +460,21 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
             continue
 
         if len(spl_counter_a) + len(spl_counter_b) + disc_counter_a + disc_counter_b > 0:
-            gt_plist = bayes_gt(ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')] + conc_counter_a + conc_counter_b, spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + disc_counter_a + disc_counter_b)
+
+            split_ref = int(split_weight * (ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')]))
+            split_alt = int(split_weight * (spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')]))
+
+            disc_ref = int(disc_weight * (conc_counter_a + conc_counter_b))
+            disc_alt = int(disc_weight * (disc_counter_a + disc_counter_b))
+
+            # if both types of evidence, boost it.
+            if split_alt > 0 and disc_alt > 0:
+                split_ref = int(booster * split_ref)
+                split_alt = int(booster * split_alt)
+                disc_ref = int(booster * disc_ref)
+                disc_alt = int(booster * disc_alt)
+
+            gt_plist = bayes_gt(split_ref + disc_ref, split_alt + disc_alt)
             gt_idx = gt_plist.index(max(gt_plist[1:]))
 
             if debug:
@@ -498,7 +515,7 @@ def main():
         spl_list.append(pysam.Samfile(sfile, 'rb'))
 
     # call primary function
-    sv_genotype(args.input_vcf, bam_list, spl_list, args.output_vcf, args.splflank, args.discflank, args.z, args.mean_frag_size, args.sd_frag_size, args.debug)
+    sv_genotype(args.input_vcf, bam_list, spl_list, args.output_vcf, args.splflank, args.discflank, args.z, args.mean_frag_size, args.sd_frag_size, args.split_weight, args.disc_weight, args.booster, args.debug)
 
     # close the files
     args.input_vcf.close()
