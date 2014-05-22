@@ -28,9 +28,9 @@ description: Compute genotype of structural variants based on breakpoint depth")
     parser.add_argument('-S', '--split_bam', type=str, required=False, default=None, help='split-read bam file for sample')
     parser.add_argument('-m', '--mean_frag_size', type=float, required=True, help='mean fragment size of library')
     parser.add_argument('-s', '--sd_frag_size', type=float, required=True, help='standard deviation of fragment size of library')
-    parser.add_argument('--split_weight', type=float, required=False, default=1, help='weight for split reads')
-    parser.add_argument('--disc_weight', type=float, required=False, default=1, help='weight for discordant reads')
-    parser.add_argument('--booster', type=float, required=False, default=1.5, help='multiplier for weights with more than one type of support')
+    parser.add_argument('--split_weight', type=float, required=False, default=1, help='weight for split reads [1]')
+    parser.add_argument('--disc_weight', type=float, required=False, default=1, help='weight for discordant reads [1]')
+    parser.add_argument('--booster', type=float, required=False, default=1.5, help='multiplier for weights with more than one type of support [1.5]')
     #parser.add_argument('-s', '--samples', type=str, required=False, help='sample names of VCF header, comma-separated ')
     parser.add_argument('-o', '--output_vcf', type=argparse.FileType('w'), default=sys.stdout, help='output BEDPE to write (default: stdout)')
     parser.add_argument('--debug', action='store_true', help='debugging verbosity')
@@ -248,6 +248,20 @@ class Genotype(object):
                 g_list.append('.')
         return ':'.join(map(str,g_list))
 
+
+def log_choose(n, k):
+    r = 0.0
+    # swap for efficiency if k is more than half of n
+    if k * 2 > n:
+        k = n - k
+
+    for  d in xrange(1,k+1):
+        r += math.log(n, 10)
+        r -= math.log(d, 10)
+        n -= 1
+
+    return r
+
 # n choose k combination
 def choose(n, k):
     fact = math.factorial
@@ -262,18 +276,18 @@ def phred(x):
     else:
         return max(0, -10 * math.log(x, 10))
 
-# return the genotype and p-value
+# return the genotype and log10 p-value
 def bayes_gt(ref, alt):
     # prob seeing an alt read with true genotype of of hom_ref, het, hom_alt respectively
     p_alt = [0.05, 0.5, 0.8]
 
     total = ref + alt
     
-    p_homref = choose(total, alt) * p_alt[0]**alt * (1 - p_alt[0])**ref
-    p_het = choose(total, alt) * p_alt[1]**alt * (1 - p_alt[1])**ref
-    p_homalt = choose(total, alt) * p_alt[2]**alt * (1 - p_alt[2])**ref
+    lp_homref = log_choose(total, alt) + alt * math.log(p_alt[0], 10) + ref * math.log(1 - p_alt[0], 10)
+    lp_het = log_choose(total, alt) + alt * math.log(p_alt[1], 10) + ref * math.log(1 - p_alt[1], 10)
+    lp_homalt = log_choose(total, alt) + alt * math.log(p_alt[2], 10) + ref * math.log(1 - p_alt[2], 10)
 
-    return (p_homref, p_het, p_homalt)
+    return (lp_homref, lp_het, lp_homalt)
 
 # primary function
 def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, mean_ospan, sd_ospan, split_weight, disc_weight, booster, debug):
@@ -474,14 +488,16 @@ def sv_genotype(vcf_file, bam_list, spl_list, vcf_out, splflank, discflank, z, m
                 disc_ref = int(booster * disc_ref)
                 disc_alt = int(booster * disc_alt)
 
-            gt_plist = bayes_gt(split_ref + disc_ref, split_alt + disc_alt)
-            gt_idx = gt_plist.index(max(gt_plist[1:]))
+            gt_lplist = bayes_gt(split_ref + disc_ref, split_alt + disc_alt)
+            gt_idx = gt_lplist.index(max(gt_lplist[1:]))
 
             if debug:
-                print gt_plist
+                print gt_lplist
 
-            var.qual = phred(gt_plist[0]/sum(gt_plist))
-            var.genotype(sample).set_format('GQ', phred(1 - gt_plist[gt_idx]/sum(gt_plist[1:])))
+            #var.qual = phred(gt_plist[0]/sum(gt_plist))
+            var.qual = -10 * (gt_lplist[0] - sum(10**x for x in gt_lplist))
+
+            var.genotype(sample).set_format('GQ', -10 * (gt_lplist[0] - sum(10**x for x in gt_lplist)))
             var.genotype(sample).set_format('DP', spl_counter_a[var.pos] + ref_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + ref_counter_b[var.get_info('END')] + conc_counter_a + disc_counter_a + conc_counter_b + disc_counter_b)
             var.genotype(sample).set_format('AO', spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + disc_counter_a + disc_counter_b)
             var.genotype(sample).set_format('RO', ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')] + conc_counter_a + conc_counter_b)
