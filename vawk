@@ -23,17 +23,15 @@ description: An awk-like VCF parser")
     #parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
     #parser.add_argument('--help', required=False, action=parser.print_help(), help='show this help message and exit')
     parser.add_argument('--debug', action='store_true', help='debugging level verbosity')
-    parser.add_argument('-v', '--var', required=False, type=str, help='declare an external variable')
+    #parser.add_argument('-v', '--var', required=False, type=str, help='declare an external variable')
     parser.add_argument('--header', required=False, action='store_true', help='print VCF header')
-    parser.add_argument('vawk_string', nargs=1, help='vawk string')
+    parser.add_argument('vawk_string', nargs=1, help='vawk string\n \
+    INFO$[FIELD], SAMPLE$[ID], SAMPLE$[ID]$[FMT]\n \
+    ex: \'{ if (INFO$AF>0.5) print $1,$2,$3,INFO$AN,SAMPLE$NA12878 }\'')
     parser.add_argument('vcf', nargs='?', type=str, default=None, help='VCF file (default: stdin)')
 
     # parse the arguments
     args = parser.parse_args()
-
-    # if args.help:
-    #     parser.print_help()
-    #     exit(1)
 
     # if no input, check if part of pipe and if so, read stdin.
     if args.vcf == None:
@@ -105,7 +103,7 @@ def parse(raw):
     return (begin, perline, end)
 
 # primary function
-def vawk(header, vawk_string, vcf_file, debug):
+def vawk(debug, header, vawk_string, vcf_file):
     # parse the vawk string in to BEGIN, END, and PERLINE
     (begin, perline, end) = parse(vawk_string[0])
 
@@ -116,14 +114,11 @@ def vawk(header, vawk_string, vcf_file, debug):
 
     # get the requested info keys from the command line (format: INFO$FIELD)
     info_keys = set(re.findall(r'INFO\$([^\W]*)', perline))
-    sample_keys = set(re.findall(r'SAMPLE\$([^\W]*)', perline))
-
-    print sample_keys
-
+        
     if re.search('INFO\$',perline):
         # split and parse the relevant INFO fields
         # THE SPLIT INFO MATCHING CAN BE SPED UP BY DOING MULTI GREP AND MOVING THE OR STATEMENT INSIDE
-        perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { ' \
+        perline = 'split($8,x,";"); for (i=1;i<=length(x);++i) { ' \
                   + ' '.join(['if (x[i]~"^' + mykey + '=" || x[i]=="' + mykey + '") { split(x[i],info,"="); if (length(info)==1) { INFO_' + mykey + '=1} else {INFO_' + mykey + '=info[2]} }' for mykey in info_keys]) \
                   + '} ' \
                   + perline
@@ -131,10 +126,42 @@ def vawk(header, vawk_string, vcf_file, debug):
         for mykey in info_keys:
             perline = re.sub('INFO\$' + mykey, 'INFO_' + mykey, perline)
 
+
+    # --------------------------------------
+    # sample info
+    samples_raw = set(re.findall(r'SAMPLE\$([a-zA-Z0-9_^$]*)', perline))
+
+    print samples_raw
+
+    #print samples_raw
+    sample_keys = []
+    for s in samples_raw:
+        s_tok = s.split('$')
+        if len(s_tok) == 1:
+            sample_keys.append([s_tok[0], 'ALL'])
+        elif len(s_tok) == 2:
+            sample_keys.append(s_tok)
+        else:
+            print 'Error: format should be SAMPLE$[ID]$[FMT]'
+            exit(1)
+
+    for s_key in sample_keys:
+        if s_key[1] == 'ALL':
+            perline = 'SAMPLE_' + '_'.join(s_key) + '=$SAMPLE["' + s_key[0] + '"]; ' + perline
+        else:
+            perline = 'split($SAMPLE["' + s_key[0] + '"],samp,":"); for(i=1;i<=length(fmt);++i) { if (fmt[i]=="' + s_key[1] + '") { SAMPLE_' + '_'.join(s_key) + '=samp[i]; break } } ' + perline
+
     # parse the sample info
     if re.search('SAMPLE\$',perline):
-        for mykey in sample_keys:
-            perline = re.sub('SAMPLE\$' + mykey, '$SAMPLE["' + mykey + '"]', perline)
+        for s_key in sample_keys:
+            if s_key[1] == 'ALL':
+                perline = re.sub('SAMPLE\$' + s_key[0], 'SAMPLE_' + '_'.join(s_key), perline)
+            else:
+                perline = re.sub('SAMPLE\$' + '\$'.join(s_key), 'SAMPLE_' + '_'.join(s_key), perline)
+                
+
+    # split up the FORMAT field
+    perline = 'split($9,fmt,":"); ' + perline
 
     # only print the header if requested
     if header:
@@ -146,7 +173,7 @@ def vawk(header, vawk_string, vcf_file, debug):
 
     cmd = ['awk', vawk_string, vcf_file]
     if debug:
-        print cmd
+        print ' '.join(cmd)
     
     #print subprocess.check_output(['echo', 'Hello World'])
     #subprocess.check_output(["echo", "Hello World!"])
@@ -174,7 +201,7 @@ def main():
     args = get_args()
 
     # call primary function
-    vawk(args.header, args.vawk_string, args.vcf, args.debug)
+    vawk(args.debug, args.header, args.vawk_string, args.vcf)
 
 # initialize the script
 if __name__ == '__main__':
