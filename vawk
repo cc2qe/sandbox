@@ -127,12 +127,13 @@ def vawk(header, vawk_string, vcf_file, debug):
     #     perline = 'if (info[1]=="' + mykey + '") { INFO_' + mykey + '=info[2]}' + perline
     # perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { split(x[i],info,"="); ' + perline
 
-    
-    perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { split(x[i],info,"="); ' \
-              + ' '.join(['if (info[1]=="' + mykey + '") { if (length(info)==1) { INFO_' + mykey + '=1} else INFO_' + mykey + '=info[2]}' for mykey in info_keys]) \
+
+
+    perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { ' \
+              + ' '.join(['if (x[i]~"^' + mykey + '=") { split(x[i],info,"="); if (length(info)==1) { INFO_' + mykey + '=1} else {INFO_' + mykey + '=info[2]} }' for mykey in info_keys]) \
               + '} ' \
               + perline
-                  
+
     # replace the toxic $ in the awk command
     for mykey in info_keys:
         perline = re.sub('INFO\$' + mykey, 'INFO_' + mykey, perline)
