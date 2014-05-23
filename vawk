@@ -26,8 +26,8 @@ description: An awk-like VCF parser")
     #parser.add_argument('-v', '--var', required=False, type=str, help='declare an external variable')
     parser.add_argument('--header', required=False, action='store_true', help='print VCF header')
     parser.add_argument('vawk_string', nargs=1, help='vawk string\n \
-    INFO$[FIELD], SAMPLE$[ID], SAMPLE$[ID]$[FMT]\n \
-    ex: \'{ if (INFO$AF>0.5) print $1,$2,$3,INFO$AN,SAMPLE$NA12878 }\'')
+    I$[FIELD], S$[ID], S$[ID]$[FMT]\n \
+    ex: \'{ if (I$AF>0.5) print $1,$2,$3,I$AN,S$NA12878 }\'')
     parser.add_argument('vcf', nargs='?', type=str, default=None, help='VCF file (default: stdin)')
 
     # parse the arguments
@@ -112,10 +112,10 @@ def vawk(debug, header, vawk_string, vcf_file):
         print 'perline:', perline
         print 'end:', end
 
-    # get the requested info keys from the command line (format: INFO$FIELD)
-    info_keys = set(re.findall(r'INFO\$([^\W]*)', perline))
+    # get the requested info keys from the command line (format: I$FIELD)
+    info_keys = set(re.findall(r'I\$([^\W]*)', perline))
         
-    if re.search('INFO\$',perline):
+    if re.search('I\$',perline):
         # split and parse the relevant INFO fields
         # THE SPLIT INFO MATCHING CAN BE SPED UP BY DOING MULTI GREP AND MOVING THE OR STATEMENT INSIDE
         perline = 'split($8,x,";"); for (i=1;i<=length(x);++i) { ' \
@@ -124,14 +124,12 @@ def vawk(debug, header, vawk_string, vcf_file):
                   + perline
         # replace the toxic $ in the awk command
         for mykey in info_keys:
-            perline = re.sub('INFO\$' + mykey, 'INFO_' + mykey, perline)
+            perline = re.sub('I\$' + mykey, 'INFO_' + mykey, perline)
 
 
     # --------------------------------------
     # sample info
-    samples_raw = set(re.findall(r'SAMPLE\$([a-zA-Z0-9_^$]*)', perline))
-
-    print samples_raw
+    samples_raw = set(re.findall(r'S\$([a-zA-Z0-9_^$]*)', perline))
 
     #print samples_raw
     sample_keys = []
@@ -142,7 +140,7 @@ def vawk(debug, header, vawk_string, vcf_file):
         elif len(s_tok) == 2:
             sample_keys.append(s_tok)
         else:
-            print 'Error: format should be SAMPLE$[ID]$[FMT]'
+            print 'Error: format should be S$[ID]$[FMT]'
             exit(1)
 
     for s_key in sample_keys:
@@ -152,12 +150,12 @@ def vawk(debug, header, vawk_string, vcf_file):
             perline = 'split($SAMPLE["' + s_key[0] + '"],samp,":"); for(i=1;i<=length(fmt);++i) { if (fmt[i]=="' + s_key[1] + '") { SAMPLE_' + '_'.join(s_key) + '=samp[i]; break } } ' + perline
 
     # parse the sample info
-    if re.search('SAMPLE\$',perline):
+    if re.search('S\$',perline):
         for s_key in sample_keys:
             if s_key[1] == 'ALL':
-                perline = re.sub('SAMPLE\$' + s_key[0], 'SAMPLE_' + '_'.join(s_key), perline)
+                perline = re.sub('S\$' + s_key[0], 'SAMPLE_' + '_'.join(s_key), perline)
             else:
-                perline = re.sub('SAMPLE\$' + '\$'.join(s_key), 'SAMPLE_' + '_'.join(s_key), perline)
+                perline = re.sub('S\$' + '\$'.join(s_key), 'SAMPLE_' + '_'.join(s_key), perline)
                 
 
     # split up the FORMAT field
