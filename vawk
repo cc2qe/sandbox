@@ -54,10 +54,13 @@ def parse(raw):
     op_brace = 0
     b = 0
     a = 0
+    begin_idx = [0,-1]
+    end_idx = [0,-1]
 
     # get BEGIN script
     try:
-        a = re.search(r'BEGIN\s*{', raw).start() + 5
+        begin_idx[0] = re.search(r'BEGIN\s*{', raw).start()
+        a = begin_idx[0] + 5
         b = a
         while begin == '':
             if raw[b] == '{':
@@ -66,31 +69,16 @@ def parse(raw):
                 op_brace -= 1
                 if op_brace == 0:
                     begin = raw[a:b+1].strip()[1:-1]
-                    b += 1
-                    a = b
+                    begin_idx[1] = b
                     break
             b += 1
     except AttributeError:
         pass
-
-    # get PER-LINE script
-    try:
-        while perline == '':
-            if raw[b] == '{':
-                op_brace += 1
-            elif raw[b] == '}':
-                op_brace -= 1
-                if op_brace == 0:
-                    if re.search(r'^BEGIN|^END', raw[a:b+1].strip()):
-                        break
-                    perline = raw[a:b+1].strip()[1:-1]
-                    break
-            b += 1
-    except AttributeError:
-        pass
+    raw = raw[:begin_idx[0]] + raw[begin_idx[1]+1:]
 
     # get END script
     try:
+        end_idx[0] = re.search(r'END\s*{', raw).start()
         a = re.search(r'END\s*{', raw).start() + 3
         b = a
         while end == '':
@@ -100,20 +88,31 @@ def parse(raw):
                 op_brace -= 1
                 if op_brace == 0:
                     end = raw[a:b+1].strip()[1:-1]
+                    end_idx[1] = b
                     break
             b += 1
     except AttributeError:
         pass
+    raw = raw[:end_idx[0]] + raw[end_idx[1]+1:]
+
+    # get PER-LINE script (remainder of string)
+    perline = raw.strip()
+    if perline.startswith('{') and perline.endswith('}'):
+        perline = perline[1:-1]
+    else:
+        perline = 'if (' + perline + ') print ; '
 
     return (begin, perline, end)
 
 # primary function
 def vawk(header, vawk_string, vcf_file, debug):
-    # vcf = open(vcf_file, 'r')
-
-    #print vawk_string[0]
-
+    # parse the vawk string in to BEGIN, END, and PERLINE
     (begin, perline, end) = parse(vawk_string[0])
+
+    if debug:
+        print 'begin:', begin
+        print 'perline:', perline
+        print 'end:', end
     
     #info_keys = re.findall(r'INFO\(([^)]*)\)', perline)
     info_keys = set(re.findall(r'INFO\$([^\W]*)', perline))
@@ -128,15 +127,15 @@ def vawk(header, vawk_string, vcf_file, debug):
     # perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { split(x[i],info,"="); ' + perline
 
 
-
-    perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { ' \
-              + ' '.join(['if (x[i]~"^' + mykey + '=") { split(x[i],info,"="); if (length(info)==1) { INFO_' + mykey + '=1} else {INFO_' + mykey + '=info[2]} }' for mykey in info_keys]) \
-              + '} ' \
-              + perline
-
-    # replace the toxic $ in the awk command
-    for mykey in info_keys:
-        perline = re.sub('INFO\$' + mykey, 'INFO_' + mykey, perline)
+    if re.search('INFO\$',perline):
+        # split and parse the relevant INFO fields
+        perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { ' \
+                  + ' '.join(['if (x[i]~"^' + mykey + '=" || x[i]=="' + mykey + '") { split(x[i],info,"="); if (length(info)==1) { INFO_' + mykey + '=1} else {INFO_' + mykey + '=info[2]} }' for mykey in info_keys]) \
+                  + '} ' \
+                  + perline
+        # replace the toxic $ in the awk command
+        for mykey in info_keys:
+            perline = re.sub('INFO\$' + mykey, 'INFO_' + mykey, perline)
         
     # only print the header if requested
     if header:
@@ -144,7 +143,7 @@ def vawk(header, vawk_string, vcf_file, debug):
     else:
         perline = 'if ($0~"^#") {next} else {' + perline + '}'
 
-    vawk_string = 'BEGIN {FS="\t"; OFS="\t"' + begin + '}' + ' {' + perline + '} ' + 'END {' + end + '}'
+    vawk_string = 'BEGIN {FS="\t"; OFS="\t"; ' + begin + '}' + ' {' + perline + '} ' + 'END {' + end + '}'
 
     cmd = ['awk', vawk_string, vcf_file]
     if debug:
