@@ -113,19 +113,9 @@ def vawk(header, vawk_string, vcf_file, debug):
         print 'begin:', begin
         print 'perline:', perline
         print 'end:', end
-    
-    #info_keys = re.findall(r'INFO\(([^)]*)\)', perline)
+
+    # get the requested info keys from the command line (format: INFO$FIELD)
     info_keys = set(re.findall(r'INFO\$([^\W]*)', perline))
-
-    #print info_keys
-
-
-    # perline = '} ' + perline
-    # for mykey in info_keys:
-
-    #     perline = 'if (info[1]=="' + mykey + '") { INFO_' + mykey + '=info[2]}' + perline
-    # perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { split(x[i],info,"="); ' + perline
-
 
     if re.search('INFO\$',perline):
         # split and parse the relevant INFO fields
