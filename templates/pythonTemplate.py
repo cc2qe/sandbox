@@ -57,4 +57,8 @@ def main():
 
 # initialize the script
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except IOError, e:
+        if e.errno != 32:  # ignore SIGPIPE
+            raise
