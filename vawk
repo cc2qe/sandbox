@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-import argparse, sys
+import argparse, sys, re
 from argparse import RawTextHelpFormatter
+from subprocess import Popen, PIPE, STDOUT
 
 __author__ = "Colby Chiang (cc2qe@virginia.edu)"
 __version__ = "$Revision: 0.0.1 $"
@@ -11,19 +12,27 @@ __date__ = "$Date: 2014-05-22 16:59 $"
 # define functions
 
 def get_args():
-    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter,
+                                     add_help=False, description="\
 vawk\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: An awk-like VCF parser")
-    parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
-    parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
-    parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
-    parser.add_argument('-v', '--vcf', required=False, type=argparse.FileType('r'), help='VCF file')
-    #parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='file to read. If \'-\' or absent then defaults to stdin.')
+    #parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
+    #parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
+    #parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
+    #parser.add_argument('--help', required=False, action=parser.print_help(), help='show this help message and exit')
+    parser.add_argument('-v', '--var', required=False, type=str, help='declare an external variable')
+    parser.add_argument('-h', '--header', required=False, action='store_true', help='print VCF header')
+    parser.add_argument('vawk_string', nargs=1, help='vawk string')
+    parser.add_argument('vcf', nargs='?', type=str, default=None, help='VCF file (default: stdin)')
 
     # parse the arguments
     args = parser.parse_args()
+
+    # if args.help:
+    #     parser.print_help()
+    #     exit(1)
 
     # if no input, check if part of pipe and if so, read stdin.
     if args.vcf == None:
@@ -31,16 +40,119 @@ description: An awk-like VCF parser")
             parser.print_help()
             exit(1)
         else:
-            args.vcf = sys.stdin
+            args.vcf = '-'
 
     # send back the user input
     return args
 
+# parse the vawk string into BEGIN PER-LINE and END portions
+def parse(raw):
+    begin = ''
+    perline = ''
+    end = ''
+    op_brace = 0
+    b = 0
+    a = 0
+
+    # get BEGIN script
+    try:
+        a = re.search(r'BEGIN\s*{', raw).start() + 5
+        b = a
+        while begin == '':
+            if raw[b] == '{':
+                op_brace += 1
+            elif raw[b] == '}':
+                op_brace -= 1
+                if op_brace == 0:
+                    begin = raw[a:b+1].strip()[1:-1]
+                    b += 1
+                    a = b
+                    break
+            b += 1
+    except AttributeError:
+        pass
+
+    # get PER-LINE script
+    try:
+        while perline == '':
+            if raw[b] == '{':
+                op_brace += 1
+            elif raw[b] == '}':
+                op_brace -= 1
+                if op_brace == 0:
+                    if re.search(r'^BEGIN|^END', raw[a:b+1].strip()):
+                        break
+                    perline = raw[a:b+1].strip()[1:-1]
+                    break
+            b += 1
+    except AttributeError:
+        pass
+
+    # get END script
+    try:
+        a = re.search(r'END\s*{', raw).start() + 3
+        b = a
+        while end == '':
+            if raw[b] == '{':
+                op_brace += 1
+            elif raw[b] == '}':
+                op_brace -= 1
+                if op_brace == 0:
+                    end = raw[a:b+1].strip()[1:-1]
+                    break
+            b += 1
+    except AttributeError:
+        pass
+
+    return (begin, perline, end)
+
 # primary function
-def myFunction(argA, argB, flagC, file):
-    for line in file:
-        print line.rstrip()
+def vawk(header, vawk_string, vcf_file):
+    # vcf = open(vcf_file, 'r')
+
+    #print vawk_string[0]
+
+    (begin, perline, end) = parse(vawk_string[0])
     
+    #info_keys = re.findall(r'INFO\(([^)]*)\)', perline)
+    info_keys = re.findall(r'INFO\$([^\W]*)', perline)
+    #print info_keys
+
+
+    perline = '} ' + perline
+    for mykey in info_keys:
+        perline = re.sub('INFO\$' + mykey, 'INFO_' + mykey, perline)
+        perline = 'if (info[1]=="' + mykey + '") { INFO_' + mykey + '=info[2]}' + perline
+    perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { split(x[i],info,"="); ' + perline
+
+
+    # only print the header if requested
+    if header:
+        perline = 'if ($0~"^#") {print} else {' + perline + '}'
+    else:
+        perline = 'if ($0~"^#") {next} else {' + perline + '}'
+
+    vawk_string = 'BEGIN {FS="\t"; OFS="\t"' + begin + '}' + ' {' + perline + '} ' + 'END {' + end + '}'
+
+    cmd = ['awk', vawk_string, vcf_file]
+    #print cmd
+    
+    #print subprocess.check_output(['echo', 'Hello World'])
+    #subprocess.check_output(["echo", "Hello World!"])
+    p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+
+    for line in iter(p.stdout.readline, b''):
+       print line.rstrip()
+
+
+    
+    # for line in vcf:
+    #     if header or line[0] != '#':
+    #         print line.rstrip()
+
+    # close the input file
+    # vcf.close()
+
     return
 
 # --------------------------------------
@@ -51,11 +163,17 @@ def main():
     args = get_args()
 
     # call primary function
-    vawk(args.argA, args.argB, args.flagC, args.vcf)
-
-    # close the input file
-    args.input.close()
+    vawk(args.header, args.vawk_string, args.vcf)
 
 # initialize the script
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except IOError, e:
+        if e.errno != 32:  # ignore SIGPIPE
+            raise
+
+
+
+
+
