@@ -13,7 +13,7 @@ __date__ = "$Date: 2014-05-22 16:59 $"
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter,
-                                     add_help=False, description="\
+                                     add_help=True, description="\
 vawk\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
@@ -22,8 +22,9 @@ description: An awk-like VCF parser")
     #parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
     #parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
     #parser.add_argument('--help', required=False, action=parser.print_help(), help='show this help message and exit')
+    parser.add_argument('--debug', action='store_true', help='debugging level verbosity')
     parser.add_argument('-v', '--var', required=False, type=str, help='declare an external variable')
-    parser.add_argument('-h', '--header', required=False, action='store_true', help='print VCF header')
+    parser.add_argument('--header', required=False, action='store_true', help='print VCF header')
     parser.add_argument('vawk_string', nargs=1, help='vawk string')
     parser.add_argument('vcf', nargs='?', type=str, default=None, help='VCF file (default: stdin)')
 
@@ -107,7 +108,7 @@ def parse(raw):
     return (begin, perline, end)
 
 # primary function
-def vawk(header, vawk_string, vcf_file):
+def vawk(header, vawk_string, vcf_file, debug):
     # vcf = open(vcf_file, 'r')
 
     #print vawk_string[0]
@@ -115,17 +116,27 @@ def vawk(header, vawk_string, vcf_file):
     (begin, perline, end) = parse(vawk_string[0])
     
     #info_keys = re.findall(r'INFO\(([^)]*)\)', perline)
-    info_keys = re.findall(r'INFO\$([^\W]*)', perline)
+    info_keys = set(re.findall(r'INFO\$([^\W]*)', perline))
+
     #print info_keys
 
 
-    perline = '} ' + perline
+    # perline = '} ' + perline
+    # for mykey in info_keys:
+
+    #     perline = 'if (info[1]=="' + mykey + '") { INFO_' + mykey + '=info[2]}' + perline
+    # perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { split(x[i],info,"="); ' + perline
+
+    
+    perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { split(x[i],info,"="); ' \
+              + ' '.join(['if (info[1]=="' + mykey + '") { if (length(info)==1) { INFO_' + mykey + '=1} else INFO_' + mykey + '=info[2]}' for mykey in info_keys]) \
+              + '} ' \
+              + perline
+                  
+    # replace the toxic $ in the awk command
     for mykey in info_keys:
         perline = re.sub('INFO\$' + mykey, 'INFO_' + mykey, perline)
-        perline = 'if (info[1]=="' + mykey + '") { INFO_' + mykey + '=info[2]}' + perline
-    perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { split(x[i],info,"="); ' + perline
-
-
+        
     # only print the header if requested
     if header:
         perline = 'if ($0~"^#") {print} else {' + perline + '}'
@@ -135,7 +146,8 @@ def vawk(header, vawk_string, vcf_file):
     vawk_string = 'BEGIN {FS="\t"; OFS="\t"' + begin + '}' + ' {' + perline + '} ' + 'END {' + end + '}'
 
     cmd = ['awk', vawk_string, vcf_file]
-    #print cmd
+    if debug:
+        print cmd
     
     #print subprocess.check_output(['echo', 'Hello World'])
     #subprocess.check_output(["echo", "Hello World!"])
@@ -163,7 +175,7 @@ def main():
     args = get_args()
 
     # call primary function
-    vawk(args.header, args.vawk_string, args.vcf)
+    vawk(args.header, args.vawk_string, args.vcf, args.debug)
 
 # initialize the script
 if __name__ == '__main__':
