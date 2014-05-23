@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import argparse, sys
+from argparse import RawTextHelpFormatter
+
+__author__ = "Colby Chiang (cc2qe@virginia.edu)"
+__version__ = "$Revision: 0.0.1 $"
+__date__ = "$Date: 2014-05-22 16:59 $"
+
+# --------------------------------------
+# define functions
+
+def get_args():
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
+vawk\n\
+author: " + __author__ + "\n\
+version: " + __version__ + "\n\
+description: An awk-like VCF parser")
+    parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
+    parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
+    parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
+    parser.add_argument('-v', '--vcf', required=False, type=argparse.FileType('r'), help='VCF file')
+    #parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='file to read. If \'-\' or absent then defaults to stdin.')
+
+    # parse the arguments
+    args = parser.parse_args()
+
+    # if no input, check if part of pipe and if so, read stdin.
+    if args.vcf == None:
+        if sys.stdin.isatty():
+            parser.print_help()
+            exit(1)
+        else:
+            args.vcf = sys.stdin
+
+    # send back the user input
+    return args
+
+# primary function
+def myFunction(argA, argB, flagC, file):
+    for line in file:
+        print line.rstrip()
+    
+    return
+
+# --------------------------------------
+# main function
+
+def main():
+    # parse the command line args
+    args = get_args()
+
+    # call primary function
+    vawk(args.argA, args.argB, args.flagC, args.vcf)
+
+    # close the input file
+    args.input.close()
+
+# initialize the script
+if __name__ == '__main__':
+    sys.exit(main())
