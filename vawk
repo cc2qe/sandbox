@@ -116,9 +116,13 @@ def vawk(header, vawk_string, vcf_file, debug):
 
     # get the requested info keys from the command line (format: INFO$FIELD)
     info_keys = set(re.findall(r'INFO\$([^\W]*)', perline))
+    sample_keys = set(re.findall(r'SAMPLE\$([^\W]*)', perline))
+
+    print sample_keys
 
     if re.search('INFO\$',perline):
         # split and parse the relevant INFO fields
+        # THE SPLIT INFO MATCHING CAN BE SPED UP BY DOING MULTI GREP AND MOVING THE OR STATEMENT INSIDE
         perline = 'split($8,x,";"); for (i=1; i<=length(x); ++i) { ' \
                   + ' '.join(['if (x[i]~"^' + mykey + '=" || x[i]=="' + mykey + '") { split(x[i],info,"="); if (length(info)==1) { INFO_' + mykey + '=1} else {INFO_' + mykey + '=info[2]} }' for mykey in info_keys]) \
                   + '} ' \
@@ -126,12 +130,17 @@ def vawk(header, vawk_string, vcf_file, debug):
         # replace the toxic $ in the awk command
         for mykey in info_keys:
             perline = re.sub('INFO\$' + mykey, 'INFO_' + mykey, perline)
-        
+
+    # parse the sample info
+    if re.search('SAMPLE\$',perline):
+        for mykey in sample_keys:
+            perline = re.sub('SAMPLE\$' + mykey, '$SAMPLE["' + mykey + '"]', perline)
+
     # only print the header if requested
     if header:
-        perline = 'if ($0~"^#") {print} else {' + perline + '}'
+        perline = 'if ($0~"^#") {if ($0!~"^##") { for (i=10;i<=NF;++i) SAMPLE[$i]=i; }; print} else {' + perline + '}'
     else:
-        perline = 'if ($0~"^#") {next} else {' + perline + '}'
+        perline = 'if ($0~"^#") {if ($0!~"^##") { for (i=10;i<=NF;++i) SAMPLE[$i]=i; }; next} else {' + perline + '}'
 
     vawk_string = 'BEGIN {FS="\t"; OFS="\t"; ' + begin + '}' + ' {' + perline + '} ' + 'END {' + end + '}'
 
