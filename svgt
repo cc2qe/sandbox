@@ -158,8 +158,10 @@ class Variant(object):
         self.active_formats = list()
         self.gts = dict()
         # make a genotype for each sample at variant
-        for s in self.sample_list:
-            self.gts[s] = Genotype(self, s)
+        for i in xrange(len(self.sample_list)):
+            s_gt = var_list[9+i].split(':')[0]
+            s = self.sample_list[i]
+            self.gts[s] = Genotype(self, s, s_gt)
 
         self.info = dict()
         i_split = [a.split('=') for a in var_list[7].split(';')] # temp list of split info column
@@ -217,10 +219,10 @@ class Variant(object):
         return s
 
 class Genotype(object):
-    def __init__(self, variant, sample_name):
+    def __init__(self, variant, sample_name, gt):
         self.format = dict()
         self.variant = variant
-        self.set_format('GT', './.')
+        self.set_format('GT', gt)
 
     def set_format(self, field, value):
         if field in [i.id for i in self.variant.format_list]:
@@ -375,6 +377,10 @@ def sv_genotype(vcf_file, sample_list, bam_list, spl_list, vcf_out, splflank, di
 
         v = line.rstrip().split('\t')
         var = Variant(v, vcf)
+        # don't genotype reference variants
+        if var.genotype(sample).get_format('GT') == '0/0':
+            print var.get_var_string()
+            continue
         o1, o2 =  list(var.info['STR'].split(',')[0].split(':')[0])
         end = int(var.get_info('END'))
 
@@ -452,6 +458,8 @@ def sv_genotype(vcf_file, sample_list, bam_list, spl_list, vcf_out, splflank, di
 
         conc_counter_b = count_concordant(var.chrom, int(var.get_info('END')), 0, mean_ospan + sd_ospan * z, discflank, bam)
         disc_counter_b = count_discordant(var.chrom, int(var.get_info('END')), o2, o1, 0, mean_ospan + sd_ospan * z, discflank, bam)
+
+        # print var.genotype(sample).get_format('GT')
 
         if debug:
             print 'pe_a', conc_counter_a, disc_counter_a
