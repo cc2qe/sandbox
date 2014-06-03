@@ -19,7 +19,7 @@ author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: An awk-like VCF parser")
     parser.add_argument('--debug', action='store_true', help='debugging level verbosity')
-    #parser.add_argument('-v', '--var', required=False, type=str, help='declare an external variable')
+    parser.add_argument('-v', '--var', action='append', required=False, type=str, help='declare an external variable')
     parser.add_argument('--header', required=False, action='store_true', help='print VCF header')
     parser.add_argument('vawk_string', nargs=1, help='vawk string\n \
     I$[FIELD], S$[ID], S$[ID]$[FMT]\n \
@@ -99,7 +99,14 @@ def parse(raw):
     return (begin, perline, end)
 
 # primary function
-def vawk(debug, header, vawk_string, vcf_file):
+def vawk(debug, header, var, vawk_string, vcf_file):
+    # parse the external variables
+    var_list = []
+    for v in var:
+        var_list = var_list + ['-v', v]
+
+    print var_list
+
     # parse the vawk string in to BEGIN, END, and PERLINE
     (begin, perline, end) = parse(vawk_string[0])
 
@@ -165,7 +172,7 @@ def vawk(debug, header, vawk_string, vcf_file):
 
     vawk_string = 'BEGIN {FS="\t"; OFS="\t"; ' + begin + '}' + ' {' + perline + '} ' + 'END {' + end + '}'
 
-    cmd = ['awk', vawk_string, vcf_file]
+    cmd = ['awk'] + var_list + [vawk_string, vcf_file]
     if debug:
         print ' '.join(cmd)
     
@@ -186,7 +193,7 @@ def main():
     args = get_args()
 
     # call primary function
-    vawk(args.debug, args.header, args.vawk_string, args.vcf)
+    vawk(args.debug, args.header, args.var, args.vawk_string, args.vcf)
 
 # initialize the script
 if __name__ == '__main__':
