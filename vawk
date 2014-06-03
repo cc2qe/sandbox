@@ -18,10 +18,6 @@ vawk\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: An awk-like VCF parser")
-    #parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
-    #parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
-    #parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
-    #parser.add_argument('--help', required=False, action=parser.print_help(), help='show this help message and exit')
     parser.add_argument('--debug', action='store_true', help='debugging level verbosity')
     #parser.add_argument('-v', '--var', required=False, type=str, help='declare an external variable')
     parser.add_argument('--header', required=False, action='store_true', help='print VCF header')
@@ -179,15 +175,6 @@ def vawk(debug, header, vawk_string, vcf_file):
 
     for line in iter(p.stdout.readline, b''):
        print line.rstrip()
-
-
-    
-    # for line in vcf:
-    #     if header or line[0] != '#':
-    #         print line.rstrip()
-
-    # close the input file
-    # vcf.close()
 
     return
 
