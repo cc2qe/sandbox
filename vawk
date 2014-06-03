@@ -22,7 +22,7 @@ description: An awk-like VCF parser")
     parser.add_argument('--header', required=False, action='store_true', help='print VCF header')
     parser.add_argument('vawk_string', nargs=1, help='vawk string\n \
     I$[FIELD], S$[ID], S$[ID]$[FMT]\n \
-    ex: \'{ if (I$AF>0.5) print $1,$2,$3,I$AN,S$NA12878 }\'')
+    ex: \'{ if (I$AF>0.5) print $1,$2,$3,I$AN,S$NA12878,S$NA12877$GT }\'')
     parser.add_argument('vcf', nargs='?', type=str, default=None, help='VCF file (default: stdin)')
     parser.add_argument('--debug', action='store_true', help='debugging level verbosity')
 
