@@ -377,10 +377,6 @@ def sv_genotype(vcf_file, sample_list, bam_list, spl_list, vcf_out, splflank, di
 
         v = line.rstrip().split('\t')
         var = Variant(v, vcf)
-        # don't genotype reference variants
-        if var.genotype(sample).get_format('GT') == '0/0':
-            print var.get_var_string()
-            continue
         o1, o2 =  list(var.info['STR'].split(',')[0].split(':')[0])
         end = int(var.get_info('END'))
 
@@ -495,6 +491,11 @@ def sv_genotype(vcf_file, sample_list, bam_list, spl_list, vcf_out, splflank, di
             var.genotype(sample).set_format('DP', spl_counter_a[var.pos] + ref_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + ref_counter_b[var.get_info('END')] + conc_counter_a + disc_counter_a + conc_counter_b + disc_counter_b)
             var.genotype(sample).set_format('AO', spl_counter_a[var.pos] + spl_counter_b[var.get_info('END')] + disc_counter_a + disc_counter_b)
             var.genotype(sample).set_format('RO', ref_counter_a[var.pos] + ref_counter_b[var.get_info('END')] + conc_counter_a + conc_counter_b)
+
+            # don't genotype if LUMPY call is reference
+            if var.genotype(sample).get_format('GT') == '0/0':
+                print var.get_var_string()
+                continue
             if gt_idx == 1:
                 var.genotype(sample).set_format('GT', '0/1')
             elif gt_idx == 2:
