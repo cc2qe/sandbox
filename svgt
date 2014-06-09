@@ -243,7 +243,7 @@ class Genotype(object):
         for f in self.variant.active_formats:
             if f in self.format:
                 if type(self.format[f]) == float:
-                    g_list.append('%0.0f' % self.format[f])
+                    g_list.append('%0.2f' % self.format[f])
                 else:
                     g_list.append(self.format[f])
             else:
