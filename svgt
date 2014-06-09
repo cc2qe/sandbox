@@ -504,8 +504,7 @@ def sv_genotype(vcf_file, sample_list, bam_list, spl_list, vcf_out, splflank, di
             var.genotype(sample).set_format('GT', './.')
             var.qual = 0
 
-        print var.get_var_string()
-
+        vcf_out.write(var.get_var_string() + '\n')
     vcf_out.close()
     
     return
