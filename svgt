@@ -32,7 +32,7 @@ description: Compute genotype of structural variants based on breakpoint depth")
     parser.add_argument('--split_weight', type=float, required=False, default=1, help='weight for split reads [1]')
     parser.add_argument('--disc_weight', type=float, required=False, default=1, help='weight for discordant reads [1]')
     parser.add_argument('--booster', type=float, required=False, default=1.5, help='multiplier for weights with more than one type of support [1.5]')
-    parser.add_argument('-o', '--output_vcf', type=argparse.FileType('w'), default=sys.stdout, help='output BEDPE to write (default: stdout)')
+    parser.add_argument('-o', '--output_vcf', type=argparse.FileType('w'), default=sys.stdout, help='output VCF to write (default: stdout)')
     parser.add_argument('--debug', action='store_true', help='debugging verbosity')
 
     # parse the arguments
@@ -267,7 +267,7 @@ def log_choose(n, k):
 # return the genotype and log10 p-value
 def bayes_gt(ref, alt):
     # prob seeing an alt read with true genotype of of hom_ref, het, hom_alt respectively
-    p_alt = [0.05, 0.5, 0.8]
+    p_alt = [0.2, 0.4, 0.8]
 
     total = ref + alt
     
