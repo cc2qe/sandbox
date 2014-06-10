@@ -116,12 +116,18 @@ class Vcf(object):
             self.number = str(number)
             self.type = str(type)
             self.desc = str(desc)
+            # strip the double quotes around the string if present
+            if self.desc.startswith('"') and self.desc.endswith('"'):
+                self.desc = self.desc[1:-1]
             self.hstring = '##INFO=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
 
     class Alt(object):
         def __init__(self, id, desc):
             self.id = str(id)
             self.desc = str(desc)
+            # strip the double quotes around the string if present
+            if self.desc.startswith('"') and self.desc.endswith('"'):
+                self.desc = self.desc[1:-1]
             self.hstring = '##ALT=<ID=' + self.id + ',Description=\"' + self.desc + '\">'
 
     class Format(object):
@@ -130,6 +136,9 @@ class Vcf(object):
             self.number = str(number)
             self.type = str(type)
             self.desc = str(desc)
+            # strip the double quotes around the string if present
+            if self.desc.startswith('"') and self.desc.endswith('"'):
+                self.desc = self.desc[1:-1]
             self.hstring = '##FORMAT=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
 
 class Variant(object):
