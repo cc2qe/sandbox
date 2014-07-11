@@ -162,6 +162,11 @@ class Variant(object):
             s_gt = var_list[9+i].split(':')[0]
             s = self.sample_list[i]
             self.gts[s] = Genotype(self, s, s_gt)
+        # import the existing fmt fields
+        for i in xrange(len(self.sample_list)):
+            s = self.sample_list[i]
+            for j in zip(var_list[8].split(':'), var_list[9+i].split(':')):
+                self.gts[s].set_format(j[0], j[1])
 
         self.info = dict()
         i_split = [a.split('=') for a in var_list[7].split(';')] # temp list of split info column
