@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import argparse, sys, random
+import argparse, sys, random, math
 from argparse import RawTextHelpFormatter
 
 __author__ = "Author (email@site.com)"
@@ -16,7 +16,7 @@ pythonTemplate.py\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: Basic python script template")
-    # parser.add_argument('-a', '--argA', metavar='argA', type=str, required=True, help='description of argument')
+    parser.add_argument('-s', '--seed', required=False, help='random seed')
     # parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
     # parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
     # parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='file to read. If \'-\' or absent then defaults to stdin.')
@@ -55,12 +55,32 @@ def total_dist(points, route):
         a = b
     return d
     
+def binary_flip(route):
+    new_route = route[:]
+    a,b = random.sample(xrange(1, len(route)-2),2)
+    new_route[a], new_route[b] = route[b], route[a]
+    return new_route
+
+# decide if to switch
+def switch(dist, new_dist, temp):
+    if new_dist < dist:
+        return True
+    else:
+        scale = math.exp(-abs(new_dist - dist)/temp)
+        x = random.random() * scale
+        print scale, x, temp
+        if x < temp:
+            return True
+
+def temp_fx(T, alpha):
+    return T * alpha
 
 # primary function
 def myFunction():
 
     size = 20
-    flips_per_epoch = 100
+    total_epochs = 100000
+    alpha = 0.99999
 
     points = []
     for i in xrange(size):
@@ -70,36 +90,46 @@ def myFunction():
     # print points[5], points[9]
     # print dist(points[5], points[9])
 
-    min_dist = float('inf')
-    best_route = None
+    route = range(size)
+    random.shuffle(route)
+    route.append(route[0])
+    d = total_dist(points, route)
 
-    for i in xrange(10000):
-        route = range(size)
-        random.shuffle(route)
-        route.append(route[0])
+    best_route = route
+    min_dist = d
 
-        d = total_dist(points, route)
+    i = 0
+    temp = temp_fx(1, alpha)
+    while temp > 0.001:
+        flip_route = binary_flip(route)
+        flip_d = total_dist(points, flip_route)
+
+        if switch(d, flip_d, temp):
+            route = flip_route
+            d = flip_d
+
         if d < min_dist:
-            best_route = route
             min_dist = d
+            best_route = route[:]
 
+        if i % 500 == 0:
+            f = open('routes/route_%s.txt' % i, 'w')
+            for r in route:
+                f.write('\t'.join(map(str, points[r])) + '\n')
+
+            f.close()
+
+        temp = temp_fx(temp, alpha)
+        i += 1
 
     print best_route
     print min_dist
-
-
-    f = open('route.txt', 'w')
-    for r in best_route:
-        f.write('\t'.join(map(str, points[r])) + '\n')
-
-    f.close()
         
 
-    # print route
+
 
 
         
-
     
     return
 
@@ -107,10 +137,11 @@ def myFunction():
 # main function
 
 def main():
+
     # parse the command line args
     args = get_args()
 
-
+    random.seed(args.seed)
 
     # call primary function
     myFunction()
