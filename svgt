@@ -126,12 +126,18 @@ class Vcf(object):
             self.number = str(number)
             self.type = str(type)
             self.desc = str(desc)
+            # strip the double quotes around the string if present
+            if self.desc.startswith('"') and self.desc.endswith('"'):
+                self.desc = self.desc[1:-1]
             self.hstring = '##INFO=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
 
     class Alt(object):
         def __init__(self, id, desc):
             self.id = str(id)
             self.desc = str(desc)
+            # strip the double quotes around the string if present
+            if self.desc.startswith('"') and self.desc.endswith('"'):
+                self.desc = self.desc[1:-1]
             self.hstring = '##ALT=<ID=' + self.id + ',Description=\"' + self.desc + '\">'
 
     class Format(object):
@@ -140,6 +146,9 @@ class Vcf(object):
             self.number = str(number)
             self.type = str(type)
             self.desc = str(desc)
+            # strip the double quotes around the string if present
+            if self.desc.startswith('"') and self.desc.endswith('"'):
+                self.desc = self.desc[1:-1]
             self.hstring = '##FORMAT=<ID=' + self.id + ',Number=' + self.number + ',Type=' + self.type + ',Description=\"' + self.desc + '\">'
 
 class Variant(object):
@@ -382,6 +391,12 @@ def sv_genotype(vcf_file, sample_list, bam_list, spl_list, vcf_out, splflank, di
 
         v = line.rstrip().split('\t')
         var = Variant(v, vcf)
+
+        # don't try to genotype breakends
+        if var.info['SVTYPE']=='BND':
+            vcf_out.write(var.get_var_string() + '\n')
+            continue
+
         o1, o2 =  list(var.info['STR'].split(',')[0].split(':')[0])
         end = int(var.get_info('END'))
 
