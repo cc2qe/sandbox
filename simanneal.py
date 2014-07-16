@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# http://www.theprojectspot.com/tutorial-post/simulated-annealing-algorithm-for-beginners/6
+# http://www.psychicorigami.com/2007/06/28/tackling-the-travelling-salesman-problem-simmulated-annealing/
+
+
 import argparse, sys, random, math
 from argparse import RawTextHelpFormatter
 
@@ -17,6 +21,7 @@ author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: Basic python script template")
     parser.add_argument('-s', '--seed', required=False, help='random seed')
+    parser.add_argument('-n', '--num_cities', type=int, required=True, help='number of cities')
     # parser.add_argument('-b', '--argB', metavar='argB', required=False, help='description of argument B')
     # parser.add_argument('-c', '--flagC', required=False, action='store_true', help='sets flagC to true')
     # parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='file to read. If \'-\' or absent then defaults to stdin.')
@@ -71,16 +76,19 @@ def switch(dist, new_dist, temp):
         print scale, x, temp
         if x < temp:
             return True
+        else:
+            return False
 
 def temp_fx(T, alpha):
     return T * alpha
 
 # primary function
-def myFunction():
+def myFunction(size):
 
-    size = 20
-    total_epochs = 100000
-    alpha = 0.99999
+    # total_epochs = 100000
+    start_temp = 10000
+    alpha = 0.999
+    max_evals = 1000000
 
     points = []
     for i in xrange(size):
@@ -95,12 +103,15 @@ def myFunction():
     route.append(route[0])
     d = total_dist(points, route)
 
+    print 'initial dist', d
+
     best_route = route
     min_dist = d
 
     i = 0
-    temp = temp_fx(1, alpha)
-    while temp > 0.001:
+    temp = temp_fx(start_temp, alpha)
+    # while i < max_evals:
+    while temp > 1:
         flip_route = binary_flip(route)
         flip_d = total_dist(points, flip_route)
 
@@ -112,7 +123,7 @@ def myFunction():
             min_dist = d
             best_route = route[:]
 
-        if i % 500 == 0:
+        if i % 1000 == 0:
             f = open('routes/route_%s.txt' % i, 'w')
             for r in route:
                 f.write('\t'.join(map(str, points[r])) + '\n')
@@ -144,7 +155,7 @@ def main():
     random.seed(args.seed)
 
     # call primary function
-    myFunction()
+    myFunction(args.num_cities)
 
         
 
