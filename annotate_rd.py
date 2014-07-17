@@ -163,7 +163,7 @@ class Variant(object):
             self.gts[s] = Genotype(self, s, s_gt)
         # import the existing fmt fields
         for i in xrange(len(self.sample_list)):
-                s = self.sample_list[i]
+            s = self.sample_list[i]
             for j in zip(var_list[8].split(':'), var_list[9+i].split(':')):
                 self.gts[s].set_format(j[0], j[1])
 
