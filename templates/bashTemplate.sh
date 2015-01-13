@@ -13,7 +13,7 @@ usage()
 
 usage: $0 OPTIONS
 
-OPTIONS can be:
+OPTIONS:
     -h      Show this message
     -f      Filename
     -v      Verbose (boolean)
