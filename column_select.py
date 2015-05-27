@@ -50,7 +50,7 @@ def extract_cols(col, lead_cols, skip, source):
         v = line.rstrip().split('\t')
         if in_header:
             column_map = {c: v.index(c) for c in v}
-            get_columns = range(lead_cols) + [column_map[x] for x in select]
+            get_columns = range(lead_cols) + [column_map[x] for x in select if x in column_map]
             in_header = False
         print '\t'.join(v[x] for x in get_columns)
 
