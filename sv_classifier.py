@@ -277,6 +277,9 @@ class Genotype(object):
 
 # test whether variant has read depth support
 def has_depth_support(var):
+    slope_threshold = 0.1
+    rsquared_threshold = 0.1
+    
     if 'CN' in var.active_formats:
         gt_list = []
         for s in var.sample_list:
@@ -291,54 +294,38 @@ def has_depth_support(var):
             gt_list.append(sum(map(int, gt_str.split(sep))))
 
         rd_list = map(float, [var.genotype(s).get_format('CN') for s in var.sample_list])
-
         rd = numpy.array([gt_list, rd_list])
-
-        # for col in rd:
-        #     for i in xrange(len(col)):
-
-        #         print col[i]
 
         # remove missing genotypes
         rd = rd[:, rd[0]!=-1]
 
-        # if len(set(gt_list)) > 1 and len(set(rd_list)) > 1:
-
-        # ensure variation in genotype and read depth
+        # ensure non-uniformity in genotype and read depth
         if len(numpy.unique(rd[0,:])) > 1 and len(numpy.unique(rd[1,:])) > 1:
-            # print rd
-            # degree = 1
-            # coeffs = numpy.polyfit(gt_list, rd_list, degree, full=True)
-            # print coeffs, var.info['SVTYPE']
-
-
+            # calculate regression
             (slope, intercept, r_value, p_value, std_err) = stats.linregress(rd)
-            print slope, intercept, r_value, var.info['SVTYPE'], var.var_id
+            # print slope, intercept, r_value, var.info['SVTYPE'], var.var_id
 
-            # write the scatterplot to a file
-            f = open('data/%s_%s_%sbp.txt' % (var.info['SVTYPE'], var.var_id, var.info['SVLEN']), 'w')
-            numpy.savetxt(f, numpy.transpose(rd), delimiter='\t')
-            f.close()
+            # # write the scatterplot to a file
+            # f = open('data/%s_%s_%sbp.txt' % (var.info['SVTYPE'], var.var_id, var.info['SVLEN']), 'w')
+            # numpy.savetxt(f, numpy.transpose(rd), delimiter='\t')
+            # f.close()
+            
+            if r_value ** 2 < rsquared_threshold:
+                return False
 
-            # if var.info['SVTYPE'] == 'DEL':
-            #     if min(rd_list) < 1.5:
-            #         return True
-            # elif var.info['SVTYPE'] == 'DUP':
-            #     if max(rd_list) > 2.5:
-            #         return True
+            if var.info['SVTYPE'] == 'DEL':
+                slope = -slope
+
+            if slope < slope_threshold:
+                return False
+
+            return True
     return False
 
-# def has_depth_support(var):
-#     if 'CN' in var.active_formats:
-#         rd_list = map(float, [var.genotype(s).get_format('CN') for s in var.sample_list])
-
-#         if var.info['SVTYPE'] == 'DEL':
-#             if min(rd_list) < 1.5:
-#                 return True
-#         elif var.info['SVTYPE'] == 'DUP':
-#             if max(rd_list) > 2.5:
-#                 return True
-#     return False
+def to_bnd(var):
+    var1, var2 = (var, var)
+    print 'to BND'
+    return var1
 
 # primary function
 def sv_classify(vcf_in):
@@ -365,9 +352,10 @@ def sv_classify(vcf_in):
 
         if var.info['SVTYPE'] in ['DEL', 'DUP']:
             if has_depth_support(var):
-
                 # write variant
                 vcf_out.write(var.get_var_string() + '\n')
+            else:
+                to_bnd(var)
 
     vcf_out.close()
     
