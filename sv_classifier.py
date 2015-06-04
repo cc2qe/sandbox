@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import argparse, sys
+import argparse, sys, copy
 import math, time, re
 import numpy
 from scipy import stats
@@ -323,9 +323,40 @@ def has_depth_support(var):
     return False
 
 def to_bnd(var):
-    var1, var2 = (var, var)
-    print 'to BND'
-    return var1
+    # print var.info['SVTYPE'], 'to BND'
+
+    var1 = copy.deepcopy(var)
+    var2 = copy.deepcopy(var)
+
+    # update svtype
+    var1.info['SVTYPE'] = 'BND'
+    var2.info['SVTYPE'] = 'BND'
+
+    # update variant id
+    var1.info['EVENT'] = var.var_id
+    var2.info['EVENT'] = var.var_id
+    var1.var_id = var.var_id + "_1"
+    var2.var_id = var.var_id + "_2"
+    var1.info['MATEID'] = var2.var_id
+    var2.info['MATEID'] = var1.var_id
+    
+    # update position
+    var2.pos = var.info['END']
+
+    # delete svlen and END
+    del var1.info['SVLEN']
+    del var2.info['SVLEN']
+    del var1.info['END']
+    del var2.info['END']
+    
+    if var.info['SVTYPE'] == 'DEL':
+        var1.alt = 'N[%s:%s[' % (var.chrom, var.info['END'])
+        var2.alt = ']%s:%s]N' % (var.chrom, var.pos)
+
+    elif var.info['SVTYPE'] == 'DUP':
+        var1.alt = ']%s:%s]N' % (var.chrom, var.info['END'])
+        var2.alt = 'N[%s:%s[' % (var.chrom, var.pos)
+    return var1, var2
 
 # primary function
 def sv_classify(vcf_in):
@@ -355,7 +386,8 @@ def sv_classify(vcf_in):
                 # write variant
                 vcf_out.write(var.get_var_string() + '\n')
             else:
-                to_bnd(var)
+                for m_var in to_bnd(var):
+                    vcf_out.write(m_var.get_var_string() + '\n')
 
     vcf_out.close()
     
