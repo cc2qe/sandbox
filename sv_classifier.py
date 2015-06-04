@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse, sys
-import statsmodels
 import math, time, re
 import numpy
 from scipy import stats
@@ -314,7 +313,12 @@ def has_depth_support(var):
 
 
             (slope, intercept, r_value, p_value, std_err) = stats.linregress(rd)
-            print slope, r_value, var.info['SVTYPE'], var.var_id
+            print slope, intercept, r_value, var.info['SVTYPE'], var.var_id
+
+            # write the scatterplot to a file
+            f = open('data/%s_%s_%sbp.txt' % (var.info['SVTYPE'], var.var_id, var.info['SVLEN']), 'w')
+            numpy.savetxt(f, numpy.transpose(rd), delimiter='\t')
+            f.close()
 
             # if var.info['SVTYPE'] == 'DEL':
             #     if min(rd_list) < 1.5:
