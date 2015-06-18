@@ -16,9 +16,9 @@ column_select.py\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: select columns from a file by header names")
-    parser.add_argument('-c', '--col', required=True, type=argparse.FileType('r'), help='list of column headers to extract')
-    parser.add_argument('-l', '--leading', required=False, type=int, default=0, help='number of leading columns to print [0]')
-    parser.add_argument('-s', '--skip', required=False, default=None, help='line prefix for comment')
+    parser.add_argument('-c', '--col', metavar='FILE', required=True, type=argparse.FileType('r'), help='list of column headers to extract')
+    parser.add_argument('-l', '--leading', metavar='INT', required=False, type=int, default=0, help='number of leading columns to print [0]')
+    parser.add_argument('-p', '--pass', metavar='STR', dest='pass_prefix', required=False, default=None, help='prefix for comment lines in INPUT to pass unfiltered')
     parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='phenotype file')
 
     # parse the arguments
@@ -36,7 +36,7 @@ description: select columns from a file by header names")
     return args
 
 # primary function
-def extract_cols(col, lead_cols, skip, source):
+def extract_cols(col, lead_cols, pass_prefix, source):
     # get_columns = range(lead_cols)
     select = []
     for line in col:
@@ -44,7 +44,7 @@ def extract_cols(col, lead_cols, skip, source):
     
     in_header = True
     for line in source:
-        if skip is not None and  line.startswith(skip):
+        if pass_prefix is not None and  line.startswith(pass_prefix):
             print line.rstrip()
             continue
         v = line.rstrip().split('\t')
@@ -66,7 +66,7 @@ def main():
     args = get_args()
 
     # call primary function
-    extract_cols(args.col, args.leading, args.skip, args.input)
+    extract_cols(args.col, args.leading, args.pass_prefix, args.input)
 
 # initialize the script
 if __name__ == '__main__':
