@@ -28,4 +28,4 @@ stdev <- as.numeric(args[3])
 
 
 
-cat(pnorm(z, mean=mean, sd=stdev), sep='\n')
+cat(pnorm(z, mean=mean, sd=stdev, lower.tail=FALSE), sep='\n')
