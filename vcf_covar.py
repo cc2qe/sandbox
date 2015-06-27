@@ -299,10 +299,10 @@ def explained_variation(var, covar_v):
         (slope, intercept, r_value, p_value, std_err) = stats.linregress(rd)
         # print slope, intercept, r_value, var.info['SVTYPE'], var.var_id
 
-        # write the scatterplot to a file
-        f = open('data/%s_%s.txt' % (var.info['SVTYPE'], var.var_id), 'w')
-        numpy.savetxt(f, numpy.transpose(rd), delimiter='\t')
-        f.close()
+        # # write the scatterplot to a file
+        # f = open('data/%s_%s.txt' % (var.info['SVTYPE'], var.var_id), 'w')
+        # numpy.savetxt(f, numpy.transpose(rd), delimiter='\t')
+        # f.close()
         
         return r_value ** 2
 
