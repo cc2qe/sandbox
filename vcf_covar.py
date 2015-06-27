@@ -16,12 +16,13 @@ __date__ = "$Date: 2014-04-28 14:31 $"
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
-sv_classifier.py\n\
+vcf_covar.py\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
-description: classify structural variants")
+description: filter variants by genotype correlation with covariates")
     parser.add_argument('-i', '--input', metavar='VCF', dest='vcf_in', type=argparse.FileType('r'), default=None, help='VCF input [stdin]')
-    parser.add_argument('-c', '--covar', metavar='FILE', dest='covar', type=argparse.FileType('r'), default=None, help='tab delimited file of covariates')
+    parser.add_argument('-c', '--covar', metavar='FILE', dest='covar', type=argparse.FileType('r'), default=None, required=True, help='tab delimited file of covariates')
+    parser.add_argument('-v', '--max_var', metavar='FLOAT', dest='max_var', type=float, default=0.1, help='maximum genotype variance explained by covariates for variant to PASS filtering')
 
     # parse the arguments
     args = parser.parse_args()
@@ -268,12 +269,8 @@ class Genotype(object):
                 g_list.append('.')
         return ':'.join(map(str,g_list))
 
-# test whether variant has read depth support
-def explained_variation(var):
-    slope_threshold = 0.1
-    rsquared_threshold = 0.1
-    
-    # if 'CN' in var.active_formats:
+# returned the portion of variance explained by a linear regression
+def explained_variation(var, covar_v):
     gt_list = []
     for s in var.sample_list:
         gt_str = var.genotype(s).get_format('GT')
@@ -287,53 +284,60 @@ def explained_variation(var):
         gt_list.append(sum(map(int, gt_str.split(sep))))
 
 
-    print gt_list
-    # rd_list = map(float, [var.genotype(s).get_format('CN') for s in var.sample_list])
-    # rd = numpy.array([gt_list, rd_list])
+    # print gt_list
+
+    rd = numpy.array([gt_list, covar_v])
 
     # remove missing genotypes
-    # rd = rd[:, rd[0]!=-1]
+    rd = rd[:, rd[0]!=-1]
 
-    # # ensure non-uniformity in genotype and read depth
-    # if len(numpy.unique(rd[0,:])) > 1 and len(numpy.unique(rd[1,:])) > 1:
-    #     # calculate regression
-    #     (slope, intercept, r_value, p_value, std_err) = stats.linregress(rd)
-    #     # print slope, intercept, r_value, var.info['SVTYPE'], var.var_id
+    # print rd
 
-    #     # # write the scatterplot to a file
-    #     # f = open('data/%s_%s_%sbp.txt' % (var.info['SVTYPE'], var.var_id, var.info['SVLEN']), 'w')
-    #     # numpy.savetxt(f, numpy.transpose(rd), delimiter='\t')
-    #     # f.close()
+    # # ensure non-uniformity in genotype and covariate
+    if len(numpy.unique(rd[0,:])) > 1 and len(numpy.unique(rd[1,:])) > 1:
+        # calculate regression
+        (slope, intercept, r_value, p_value, std_err) = stats.linregress(rd)
+        # print slope, intercept, r_value, var.info['SVTYPE'], var.var_id
 
-    #     if r_value ** 2 < rsquared_threshold:
-    #         return False
+        # write the scatterplot to a file
+        f = open('data/%s_%s.txt' % (var.info['SVTYPE'], var.var_id), 'w')
+        numpy.savetxt(f, numpy.transpose(rd), delimiter='\t')
+        f.close()
+        
+        return r_value ** 2
 
-    #     if var.info['SVTYPE'] == 'DEL':
-    #         slope = -slope
-
-    #     if slope < slope_threshold:
-    #         return False
-
-    #     return True
-    # return False
+    else:
+        return 0
 
 # primary function
-def vcf_covar(vcf_in, covar_file):
+def vcf_covar(vcf_in, covar_file, max_var):
+    # read covar file as matrix
+    covar = []
+    for line in covar_file:
+        covar.append(line.rstrip().split('\t')[1:])
+
     vcf_out = sys.stdout
     vcf = Vcf()
     header = []
     in_header = True
 
-    max_ev = 1
-
     for line in vcf_in:
         if in_header:
             if line[0] == '#':
                 header.append(line)
+                if line[1] != '#':
+                    vcf_samples = line.rstrip().split('\t')[9:]
                 continue
             else:
                 in_header = False
                 vcf.add_header(header)
+
+                # sort the covariates according to the VCF sample order
+                sort_map = [vcf_samples.index(x) for x in covar[0]]
+                for i in xrange(len(covar)):
+                     covar[i] = [x for (y,x) in sorted(zip(sort_map,covar[i]))]
+                # print covar
+
                 # write the output header
                 vcf_out.write(vcf.get_header() + '\n')
 
@@ -342,12 +346,13 @@ def vcf_covar(vcf_in, covar_file):
         var = Variant(v, vcf)
 
         # annotate based on read depth
-        if explained_variation(var) < max_ev:
-            # write variant
-            vcf_out.write(var.get_var_string() + '\n')
-        else:
-            for m_var in to_bnd(var):
-                vcf_out.write(m_var.get_var_string() + '\n')
+        covar_v = map(float, covar[1])
+
+        if explained_variation(var, covar_v) <= max_var:
+            var.filter = 'PASS'
+
+        # write variant
+        vcf_out.write(var.get_var_string() + '\n')
 
     vcf_out.close()
     return
@@ -361,11 +366,11 @@ def main():
     args = get_args()
 
     # call primary function
-    vcf_covar(args.vcf_in, args.covar)
+    vcf_covar(args.vcf_in, args.covar, args.max_var)
 
     # close the files
     args.vcf_in.close()
-    ae_bedfile.close()
+    args.covar.close()
 
 # initialize the script
 if __name__ == '__main__':
