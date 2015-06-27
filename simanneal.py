@@ -86,9 +86,9 @@ def kirkpatrick_cooling(start_temp, alpha):
 
 # primary function
 def myFunction(size):
-    start_temp = 200
+    start_temp = 1000
     alpha = 0.9999
-    max_evals = 100000
+    max_evals = 1000000000
 
     points = []
     for i in xrange(size):
@@ -111,6 +111,7 @@ def myFunction(size):
     min_dist = d
 
     i = 0
+    i_since_best = 0
 
     cooling_schedule = kirkpatrick_cooling(start_temp, alpha)
     path_exhaust = 0 # number of temps that have iterated because of exhausted paths
@@ -138,18 +139,20 @@ def myFunction(size):
             if d < min_dist:
                 min_dist = d
                 best_route = route[:]
+            else:
+                i_since_best += 1
 
             if len(tried) >= (size - 2) * (size - 1):
                 i += 1
                 path_exhaust += 1
                 done = True
 
-        if i % max_evals/50 == 0:
+        if i % 2000 == 0:
             f = open('routes/route_%s.txt' % i, 'w')
             for r in route:
                 f.write('\t'.join(map(str, points[r])) + '\n')
             f.close()
-        if path_exhaust > 5 or i >= max_evals:
+        if i_since_best > size**3 or path_exhaust > 5 or i >= max_evals:
             break
 
     f = open('routes/route_best.txt', 'w')
