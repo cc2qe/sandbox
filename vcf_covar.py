@@ -288,8 +288,8 @@ def explained_variation(var, covar_v):
 
     rd = numpy.array([gt_list, covar_v])
 
-    # remove missing genotypes
-    rd = rd[:, rd[0]!=-1]
+    # # remove missing genotypes
+    # rd = rd[:, rd[0]!=-1]
 
     # print rd
 
