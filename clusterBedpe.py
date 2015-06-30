@@ -34,6 +34,10 @@ description: cluster a BEDPE file by position. input must be sorted")
                         required=False,
                         default=0,
                         help='min unique loci on each partner to report feature [0]')
+    parser.add_argument('-is', '--ignore_strand',
+                        required=False,
+                        action='store_true',
+                        help='ignore strand while combining')
     parser.add_argument('-u', '--union',
                         required=False,
                         action='store_true',
@@ -83,9 +87,12 @@ class Cluster(object):
         self.uniq_a = set()
         self.uniq_b = set()
 
+        self.strand_a = ''
+        self.strand_b = ''
+
     # check whether a bedpe object is addable to this
     # cluster given the max_distance
-    def can_add(self, bedpe, max_distance):
+    def can_add(self, bedpe, max_distance, ignore_strand):
         if self.size == 0:
             return True
 
@@ -99,6 +106,11 @@ class Cluster(object):
             or self.min_b - max_distance > bedpe.end_b
             or self.max_b + max_distance < bedpe.start_b):
         #     # print "b"
+            return False
+
+        if (not ignore_strand
+            and (self.strand_a != bedpe.strand_a
+            or self.strand_b != bedpe.strand_b)):
             return False
 
         else:
@@ -120,6 +132,10 @@ class Cluster(object):
         self.uniq_b.add((bedpe.chrom_b,
                          bedpe.start_b,
                          bedpe.end_b))
+
+        self.strand_a = bedpe.strand_a
+        self.strand_b = bedpe.strand_b
+        
         self.size += 1
 
     def get_cluster_string(self, cols, oper, union):
@@ -155,6 +171,13 @@ class Bedpe(object):
         self.id = v[6]
         self.vec = v
 
+        try:
+            self.strand_a = v[8]
+            self.strand_b = v[9]
+        except IndexError:
+            self.strand_a = ''
+            self.strand_b = ''
+
 # prints and removes clusters from cluster_list that are beyond
 # distance window
 def prune(cluster_list, bedpe, max_distance, min_cluster_size, min_reciprocal, cols, oper, union):
@@ -184,7 +207,14 @@ def prune(cluster_list, bedpe, max_distance, min_cluster_size, min_reciprocal, c
     return new_cluster_list
 
 # primary function
-def cluster_bedpe(in_file, max_distance, min_cluster_size, min_reciprocal, cols, oper, union):
+def cluster_bedpe(in_file,
+                  max_distance,
+                  min_cluster_size,
+                  min_reciprocal,
+                  cols,
+                  oper,
+                  union,
+                  ignore_strand):
     # line number
     line_counter = 0
     # the number of clusters that have been output
@@ -201,7 +231,7 @@ def cluster_bedpe(in_file, max_distance, min_cluster_size, min_reciprocal, cols,
 
         matched_to_cluster = False
         for cluster in cluster_list:
-            if cluster.can_add(bedpe, max_distance):
+            if cluster.can_add(bedpe, max_distance, ignore_strand):
                 cluster.add(bedpe)
                 matched_to_cluster = True
                 break
@@ -255,7 +285,14 @@ def main():
         oper = ['collapse'] * len(cols)
 
     # call primary function
-    cluster_bedpe(args.input, args.max_distance, args.min_cluster_size, args.min_reciprocal, cols, oper, args.union)
+    cluster_bedpe(args.input,
+                  args.max_distance,
+                  args.min_cluster_size,
+                  args.min_reciprocal,
+                  cols,
+                  oper,
+                  args.union,
+                  args.ignore_strand)
 
 # initialize the script
 if __name__ == '__main__':
