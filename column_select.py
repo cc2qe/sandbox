@@ -3,9 +3,9 @@
 import argparse, sys
 from argparse import RawTextHelpFormatter
 
-__author__ = "Author (email@site.com)"
+__author__ = "Colby Chiang (cchiang@genome.wustl.edu)"
 __version__ = "$Revision: 0.0.1 $"
-__date__ = "$Date: 2013-05-09 14:31 $"
+__date__ = "$Date: 2015-08-11 10:59 $"
 
 # --------------------------------------
 # define functions
@@ -19,6 +19,7 @@ description: select columns from a file by header names")
     parser.add_argument('-c', '--col', metavar='FILE', required=True, type=argparse.FileType('r'), help='list of column headers to extract')
     parser.add_argument('-l', '--leading', metavar='INT', required=False, type=int, default=0, help='number of leading columns to print [0]')
     parser.add_argument('-p', '--pass', metavar='STR', dest='pass_prefix', required=False, default=None, help='prefix for comment lines in INPUT to pass unfiltered')
+    parser.add_argument('-m', '--missing', metavar='STR', dest='missing_fill', type=str, required=False, default=None, help="fill missing columns with string (e.g.: NA)")
     parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='phenotype file')
 
     # parse the arguments
@@ -36,7 +37,7 @@ description: select columns from a file by header names")
     return args
 
 # primary function
-def extract_cols(col, lead_cols, pass_prefix, source):
+def extract_cols(col, lead_cols, pass_prefix, missing_fill, source):
     # get_columns = range(lead_cols)
     select = []
     for line in col:
@@ -50,9 +51,17 @@ def extract_cols(col, lead_cols, pass_prefix, source):
         v = line.rstrip().split('\t')
         if in_header:
             column_map = {c: v.index(c) for c in v}
-            get_columns = range(lead_cols) + [column_map[x] for x in select if x in column_map]
+            if missing_fill is None:
+                get_columns = range(lead_cols) + [column_map[x] for x in select if x in column_map]
+                header_v = [v[x] for x in range(lead_cols) + [column_map[x] for x in select if x in column_map]]
+            else:
+                get_columns = range(lead_cols) + [column_map[x] if x in column_map else None for x in select ]
+                header_v = [v[x] for x in range(lead_cols)] + select
+
+            print '\t'.join(header_v)
             in_header = False
-        print '\t'.join(v[x] for x in get_columns)
+        else:
+            print '\t'.join(v[x] if x is not None else missing_fill for x in get_columns)
 
     source.close()
     col.close()    
@@ -66,7 +75,7 @@ def main():
     args = get_args()
 
     # call primary function
-    extract_cols(args.col, args.leading, args.pass_prefix, args.input)
+    extract_cols(args.col, args.leading, args.pass_prefix, args.missing_fill, args.input)
 
 # initialize the script
 if __name__ == '__main__':
