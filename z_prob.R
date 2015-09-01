@@ -6,9 +6,9 @@ usage <- function() {
 'usage: z_prob.R <z> <mean> <stdev>
 z_prob.R
 author: Colby Chiang (cchiang@wusm.wustl.edu)
-description: calculate the probability of a z-score
+description: calculate the two-tailed probability of a value given a normal mean, stdev
 positional arguments:
-  z        z-score to test
+  value    value to test
   mean     mean of normal distribution
   stdev    standard deviation of normal distribution
 ')
@@ -22,10 +22,10 @@ if (length(args) < 3) {
 	quit(save='no', status=1)
 }
 
-z <- as.numeric(args[1])
+val <- as.numeric(args[1])
 mean <- as.numeric(args[2])
 stdev <- as.numeric(args[3])
 
+p <- 2 * pnorm(val, mean=mean, sd=stdev, lower.tail=FALSE)
 
-
-cat(pnorm(z, mean=mean, sd=stdev, lower.tail=FALSE), sep='\n')
+cat(p, sep='\n')
