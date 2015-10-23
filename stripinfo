@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [[ -z $1 ]]
+then
+    echo "usage: $0 <INFO>"
+    exit 1
+fi
+
+INFO=$1
+
+sed "s/$INFO=[0-9\.e,-]*\(;\)\{0,1\}\(\t\)\{0,1\}/\2/g" -
+
