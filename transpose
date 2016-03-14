@@ -15,4 +15,4 @@ awk '
                 }
                 print str
             }
-        }'
+        }' FS="\t"
