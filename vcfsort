@@ -3,7 +3,23 @@
 # adapted from erik garrion's vcfsort (in vcflib)
 # https://github.com/ekg/vcflib/blob/master/bin/vcfsort
 
-awk '$0~"^#" { print $0; next } { print $0 | "sort -S 1G -k1,1V -k2,2n" }'
+# define usage function
+usage(){
+    echo "usage: vcfsort <VCF>"
+
+    exit 1
+}
+
+# set the last arg as the positional arg for input
+INPUT=$1
+
+# if no pipe and no input arg, then print usage and exit
+if [[ -t 0 && $INPUT == "" ]]
+then
+    usage
+fi
+
+awk '$0~"^#" { print $0; next } { print $0 | "sort -S 1G -k1,1V -k2,2n" }' $INPUT
 
 # awk '$0~"^#" { print $0; next } { print $0 | "sort -k3,3" }'
 
