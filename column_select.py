@@ -18,6 +18,7 @@ version: " + __version__ + "\n\
 description: select columns from a file by header names")
     parser.add_argument('-c', '--col', metavar='FILE', required=True, type=argparse.FileType('r'), help='list of column headers to extract')
     parser.add_argument('-l', '--leading', metavar='INT', required=False, type=int, default=0, help='number of leading columns to print [0]')
+    parser.add_argument('-s', '--skiprows', metavar='INT', required=False, type=int, default=0, help='number of leading rows to print [0]')
     parser.add_argument('-p', '--pass', metavar='STR', dest='pass_prefix', required=False, default=None, help='prefix for comment lines in INPUT to pass unfiltered')
     parser.add_argument('-m', '--missing', metavar='STR', dest='missing_fill', type=str, required=False, default=None, help="fill missing columns with string (e.g.: NA)")
     parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=None, help='phenotype file')
@@ -37,14 +38,20 @@ description: select columns from a file by header names")
     return args
 
 # primary function
-def extract_cols(col, lead_cols, pass_prefix, missing_fill, source):
+def extract_cols(col, lead_cols, skip_rows, pass_prefix, missing_fill, source):
     # get_columns = range(lead_cols)
     select = []
     for line in col:
         select.append(line.rstrip())
     
     in_header = True
+    skip_count = 0
     for line in source:
+        if skip_count < skip_rows:
+            print line.rstrip()
+            skip_count += 1
+            continue
+        
         if pass_prefix is not None and  line.startswith(pass_prefix):
             print line.rstrip()
             continue
@@ -75,7 +82,7 @@ def main():
     args = get_args()
 
     # call primary function
-    extract_cols(args.col, args.leading, args.pass_prefix, args.missing_fill, args.input)
+    extract_cols(args.col, args.leading, args.skiprows, args.pass_prefix, args.missing_fill, args.input)
 
 # initialize the script
 if __name__ == '__main__':
