@@ -1,0 +1,29 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{preamble}
+
+\usepackage{lipsum}
+
+\title{My Title}
+\author{Colby Chiang}
+
+\begin{document}
+\maketitle
+
+\section{Abstract}
+\LaTeX{} \citep{latex2e} is a set of macros built atop
+\TeX{} \citep{texbook}.
+
+\lipsum[1]
+
+\begin{equation}
+    \Gamma(z) = \int_0^\infty t^{z-1} e^{-t}\,dt
+\end{equation}
+
+\lipsum[2]
+
+\bibliographystyle{abbrvnat}
+\bibliography{references} % Entries are in the references.bib file
+
+\end{document}
+
