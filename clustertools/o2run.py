@@ -69,47 +69,12 @@ priority, transfer, etc.) [short]")
     #                     type=str, default=None,
     #                     help="Send errors (STDERR) to file errfile")
 
-    # parser.add_argument('-p', '--permutation',
-    #                     metavar='FILE', dest='permutation_path',
-    #                     required=True,
-    #                     type=str, default=None,
-    #                     help='FastQTL file of permutation p-values [stdin]')
-    # parser.add_argument('-a', '--argA',
-    #                     metavar='FLOAT', dest='argA',
-    #                     type=float, required=False,
-    #                     help='description of argument')
-    # parser.add_argument('-c', '--flagC',
-    #                     required=False, action='store_true',
-    #                     help='sets flagC to true')
-    # parser.add_argument('input', nargs='?', type=argparse.FileType('r'),
-    #                     default=None,
-    #                     help='file to read. If \'-\' or absent then defaults to stdin.')
-
-
     # parse the arguments
     args = parser.parse_args()
 
-    # # if no input file, check if part of pipe and if so, read stdin.
-    # if args.input_path == None:
-    #     if sys.stdin.isatty():
-    #         parser.print_help()
-    #         exit(1)
-
-    # send back the user input
     return args
 
-# open file (either plaintext or zip)
-def get_file(filename):
-    if filename.endswith('.gz'):
-        data = gzip.open(filename, 'rb')
-    else:
-        data = open(filename, 'r')
-    return data    
-
-def join_arg(flag, value):
-    return (' '.join([str(flag), str(value)]))
-
-# primary function
+# parse command line arguments to Slurm command
 def generate_slurm_cmd(args, temp):
     q = ["sbatch"]
     q.extend(['-c', str(args.ncores)])
@@ -125,8 +90,6 @@ def generate_slurm_cmd(args, temp):
 
     # append the bash script to the end of slurm cmd
     q.append(temp.name)
-
-    print(' '.join(q))
 
     return(q)
 
@@ -154,6 +117,11 @@ def main():
 
         # generate Slurm command string from arguments
         cmd = generate_slurm_cmd(args, temp)
+
+        # print the sbatch command
+        print(' '.join(cmd))
+
+        # run the command
         p = Popen(cmd)
         p.wait() # wait until subprocess is complete
     
