@@ -25,9 +25,9 @@ version: " + __version__ + "\n\
 description: wrapper for submitted jobs on HMS O2 cluster. \n\
              See https://harvardmed.atlassian.net/wiki/spaces/O2/overview \n\
              for details.")
-    parser.add_argument('--cmd',
-                        metavar='STRING', dest='cmd_string',
-                        type=str, default=None, required=True,
+    parser.add_argument('cmd',
+                        metavar='STRING',
+                        type=str, default=None,
                         help='Command to run (required)')
     parser.add_argument('-t', '--time',
                         metavar="STRING", dest='time',
