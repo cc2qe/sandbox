@@ -52,6 +52,14 @@ priority, transfer, etc.) [short]")
                         metavar="INT", dest='ncores',
                         type=int, default=1,
                         help="Number of cores per task [1]")
+    parser.add_argument('-J', '--jobname',
+                        metavar="STRING", dest='jobname',
+                        type=str, default=None,
+                        help="Jobname [random string]")
+    parser.add_argument('-k', '--keep',
+                        action='store_true', default=False,
+                        dest='keep',
+                        help="Keep temporary bash script file (deleted by default)")
     # parser.add_argument('-o', '--outfile',
     #                     metavar="STRING", dest="outfile",
     #                     type=str, default=None,
@@ -102,7 +110,7 @@ def join_arg(flag, value):
     return (' '.join([str(flag), str(value)]))
 
 # primary function
-def generate_slurm_cmd(args, temp_file):
+def generate_slurm_cmd(args, temp):
     q = ["sbatch"]
     q.extend(['-c', str(args.ncores)])
     q.extend(['-n', str(args.ntasks)])
@@ -112,13 +120,14 @@ def generate_slurm_cmd(args, temp_file):
     # arglist.append(join_arg('-e', args.errfile))
     q.extend(['-t', args.time])
 
-    q.append(temp_file.name)
+    if args.jobname is not None:
+        q.extend(['-J', args.jobname])
 
+    # append the bash script to the end of slurm cmd
+    q.append(temp.name)
 
-    print(q)
+    print(' '.join(q))
 
-    # cmd = 'sbatch ' + ' '.join(arglist) + ' ' + '/home/cc514/this.sh' #tmp.name
-    # return(cmd)
     return(q)
 
 # --------------------------------------
@@ -128,48 +137,25 @@ def main():
     # parse the command line args
     args = get_args()
 
-    # # if no input file, check if part of pipe and if so, read stdin.
-    # if args.input_path == None:
-    #     input_file = sys.stdin
-    # else:
-    #     input_file = get_file(args.input_path)
-
-    # # get permutation data
-    # permutation_file = get_file(args.permutation_path)
-
- 
     # Creating a temporary file using NamedTemporaryFile()
-    temp_file = tempfile.NamedTemporaryFile(
+    with tempfile.NamedTemporaryFile(
         mode='w+t',
         dir='.',
-        prefix='o2run-',
+        prefix='o2-',
         suffix='.sh',
-        delete=False
-    )
- 
-    print('Named file name:', temp_file.name)
+        delete=(not args.keep)
+    ) as temp:
+        print('Temporary bash script file:', temp.name)
 
-    # Writing text data into the file
-    temp_file.write('#!/bin/bash\n')
-    temp_file.write(args.cmd_string)
+        # Writing text data into the file
+        temp.write('#!/bin/bash\n')
+        temp.write(args.cmd_string)
+        temp.flush() # close and delete the file when out of scope
 
-    cmd = generate_slurm_cmd(args, temp_file)
-    p = Popen(cmd)
-
-
-    # Closing the file
-    temp_file.close()
-
-    # create temporary file for bash script
-    # with tempfile.NamedTemporaryFile(dir='.', delete=False) as tmp:
-    #     # call primary function
-    #     cmd = generate_slurm_cmd(args, tmp)
-    #     print(cmd)
-
-    #     p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-
-    # # close the files
-    # input_file.close()
+        # generate Slurm command string from arguments
+        cmd = generate_slurm_cmd(args, temp)
+        p = Popen(cmd)
+        p.wait() # wait until subprocess is complete
     
 # initialize the script
 if __name__ == '__main__':
