@@ -1,6 +1,8 @@
 % Packages
 \usepackage{amsmath, amssymb, amsthm}
+\usepackage{lmodern}
 \usepackage{mathtools}
+\usepackage{physics} % avoids fraktur font for Re and Im components
 \usepackage{graphicx} % Required for inserting images
 \usepackage{subcaption}
 \usepackage{parskip} % Non-indented paragraphs with break between
@@ -8,19 +10,32 @@
 \usepackage[hidelinks]{hyperref} % hyperlinks for references
 \usepackage{natbib} % nature bibliography citation styles
 \setcitestyle{authoryear,open={(},close={)}} %Citation-related commands
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{%
+  ,compat=1.18
+}
+\usepackage{xcolor}
+
+% Comments
+\newcommand{\cmt}[1]{[\textcolor{red}{#1}]}
+\newcommand{\data}[1]{[\textcolor{red}{#1}]}
 
 % Commands
 \newcommand{\nn}{\nonumber}
-\newcommand*\mean[1]{\bar{#1}}
-\newcommand{\Exp}{\mathbb{E}}
-\newcommand{\Var}{\operatorname{Var}}
-\newcommand{\Cov}{\operatorname{Cov}}
-\newcommand{\BigO}{\operatorname{\mathcal{O}}}
-
 \newcommand{\defeq}{\vcentcolon=}
-\newcommand{\betahat}{\hat{\beta}}
-\newcommand{\chisq}{\chi^2}
-\newcommand{\tilderjk}{\tilde{r}_{jk}}
+\newcommand{\lrarrow}{\longleftrightarrow}
+\newcommand{\omn}{\omega_0}
+\newcommand{\intper}{\int\limits_{\text{period}}}
+\newcommand{\que}{\mathord{?}}
+\newcommand{\vp}{v_\text{p}}
 
-\newtheorem{theorem}{Theorem}
-\newtheorem{proposition}{Proposition}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\sinc}{sinc}
+% \DeclareMathOperator{\Re}{Re}
+% \DeclareMathOperator{\Im}{Im}
+
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[section]

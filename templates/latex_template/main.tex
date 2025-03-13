@@ -1,32 +1,27 @@
 \documentclass[a4paper,10pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{preamble}
+\graphicspath{ {./figures/} }
 
-\usepackage{lipsum}
-
-\title{My Title}
+\title{My title}
 \author{Colby Chiang}
+\date{\today}
 
 \begin{document}
 \maketitle
 
-\section{Abstract}
-\LaTeX{} \citep{latex2e} is a set of macros built atop
-\TeX{} \citep{texbook}.
+\section*{Introduction}
+Introductory text.
 
-\lipsum[1]
+% figure
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Marchenko-Pastur_distribution.pdf}
+    \caption{Marchenko-Pastur distribution.}
+    \label{fig:mp-dist} % label comes after caption
+  \end{figure}
 
-\begin{equation}
-    \Gamma(z) = \int_0^\infty t^{z-1} e^{-t}\,dt
-\end{equation}
-
-\lipsum[2]
-
-\clearpage
-\newpage
-
-\bibliographystyle{abbrvnat}
-\bibliography{references} % Entries are in the references.bib file
+% \bibliographystyle{abbrvnat}
+% \bibliography{references} % Entries are in the references.bib file
 
 \end{document}
-
