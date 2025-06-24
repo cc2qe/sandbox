@@ -7,12 +7,13 @@ all: pdf
 
 clean:
 	latexmk -c -f $(PDF)
-	rm $(PDF) $(PAPERFILENAME).bbl
+	rm -f $(PDF) $(PAPERFILENAME).bbl $(PAPERFILENAME).bcf \
+	      $(PAPERFILENAME).blg $(PAPERFILENAME).run.xml \
+	      $(PAPERFILENAME).aux $(PAPERFILENAME).log
 
 pdf:
 	xelatex $(FLAGS) $(PAPERFILENAME)
-	if grep -q '\\citation{' $(PAPERFILENAME).aux; then bibtex $(PAPERFILENAME); fi
+	biber $(PAPERFILENAME)
 	xelatex $(FLAGS) $(PAPERFILENAME)
 	xelatex $(FLAGS) $(PAPERFILENAME)
-
 

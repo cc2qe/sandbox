@@ -8,8 +8,6 @@
 \usepackage{parskip} % Non-indented paragraphs with break between
 \usepackage{titling} % proper spacing of title when parskip loaded
 \usepackage[hidelinks]{hyperref} % hyperlinks for references
-\usepackage{natbib} % nature bibliography citation styles
-\setcitestyle{authoryear,open={(},close={)}} %Citation-related commands
 \usepackage{tikz}
 \usepackage{pgfplots}
 \pgfplotsset{%
@@ -17,6 +15,10 @@
 }
 \usepackage{xcolor}
 \usepackage[width=0.8\textwidth]{caption} % set caption width
+
+% Bibliography packages
+\usepackage[backend=biber,style=authoryear,natbib=true]{biblatex}
+\addbibresource{references.bib}
 
 % Comments
 \newcommand{\cmt}[1]{[\textcolor{red}{#1}]}

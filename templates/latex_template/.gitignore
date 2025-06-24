@@ -6,5 +6,7 @@
 *.aux
 *.bbl
 *.blg
+*.bcf
+*.run.xml
 *.out
 *.log
